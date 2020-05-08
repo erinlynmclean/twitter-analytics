@@ -1,0 +1,65 @@
+---
+title: "Twitter Analytics"
+author: "Erin McLean"
+date: "5/8/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Arctic Data Center Twitter Metrics
+
+I created a Twitter Engagement plan with the hope of increasing the Arctic Data Center's presence on Twitter. As Twitter has been gaining traction as a tool for both outreach with scientists and not scientists, I thought it would be a good way to better publicize data management and Arctic-focused news, new papers, submitted datasets, and conference participation.
+
+In the era of COVID-19, online engagement is as important as ever, so I'm going to start tracking monthly Twitter metrics to see if what I'm doing is actually making a difference.
+
+# Data Collection - Summary
+
+I collected data manually from https://analytics.twitter.com/user/arcticdatactr/home once a month near the first of each month and added it to the folder Twitter Metrics. This summary file contains:
+
+* month: month of Tweet information
+* year: year of Tweet information
+* tweets: number of Tweets that month
+* profile-visits: Number of times users visited your profile page
+* new-followers: Number of new followers you gained (equals gross new followers; does not account for followers lost)
+* tweet-impressions: Number of times users are served your tweet in timeline, search results, or from your profile
+* mentions: Number of times your @username was mentioned in tweets
+* number-followers: Number of followers, manually copied from https://twitter.com/arcticdatactr. Number of followers is the only piece of data in this file that is only available from Twitter at the time you access the site i.e. it is not made available with the rest of the data in this dataset. Thus, there are NAs for dates prior to the time I started to collect this data or for dates before I realized this data was ephemeral.
+
+# Data Collection - Monthly Tweets
+
+I collected tweet from https://analytics.twitter.com/user/arcticdatactr/home once a month near the first of each month and added it to the folder Twitter Metrics. These monthly files contain:
+
+* Tweet-ID: the identifier for the Tweet, which can be used to find the permanent URL
+* Tweet-permalink: where to find the Tweet
+* Tweet-text: the text (content) of the Tweet
+* time: the time the Tweet was sent (GMT)
+* impressions: Number of times users are served your tweet in timeline, search results, or from your profile
+* engagements: 
+* engagement-rate:
+* retweets: number of times that Tweet was retweeted
+* replies: number of replies that Tweet generated
+* user-profile-clicks: number of times a user clicked on your profile from that particular tweet
+* URL-clicks: number of times that URL within the tweet was clicked
+* hashtag-clicks: number of times any of your hashtags were clicked from that tweet
+* detail-expands: number of times users clicked 'see more' on your tweet
+* permalink-clicks:
+* follows:
+* email-tweet:
+* dial-phone: 
+* media-views: 
+* media-engagements:
+
+Other metrics that are collected are all about promoted views, etc. which the Arctic Data Center doesn't use, and as such thsoe were excluded from the analysis.
+
+## Data Analysis
+
+# Load packages
+
+```{r pressure, echo=FALSE}
+usethis::use_github()
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
