@@ -42,9 +42,13 @@ library(ggplot2)
 ```{r raw-data, echo=FALSE,results=FALSE,message=FALSE}
 website_summary_metrics <- read_csv("~/Documents/Twitter Analytics/Raw Data/website_summary_metrics.csv")
 website_summary_metrics$Date <-as.Date(website_summary_metrics$Date) 
+
+website_summary_metrics$Pub_Percent<-(website_summary_metrics$Pubs_View/website_summary_metrics$Site_View)*100
+website_summary_metrics$Data_Percent<-(website_summary_metrics$Data_View/website_summary_metrics$Site_View)*100
+website_summary_metrics$Submit_Percent<-(website_summary_metrics$Submit_View/website_summary_metrics$Site_View)*100
 ```
 
-```{r display-table, echo=FALSE}
+```{r display-table, echo=FALSE,results=FALSE,message=FALSE}
 knitr::kable(website_summary_metrics, caption = "Website Metrics Table")
 ```
 
@@ -72,7 +76,7 @@ monthlyviews<-ggplot(data = website_summary_metrics, aes(x=Date, y=Home_View)) +
   geom_point(color="#156760",size=2.5)+
   labs(title='Monthly Page Views Over Time',
        x="Date",
-       y="Page Views")
+       y="Page Views", hjust=.5)
 
 monthlyviews+theme_ADC()
 ```
@@ -118,9 +122,23 @@ submitters+theme_ADC()
 publications<-ggplot(data = website_summary_metrics, aes(x=Date, y=Pubs_View)) +
   geom_point(color="#156760",size=2.5)+
   labs(title='Monthly Publications Page Visits Over Time',
-       x="Tweets",
+       x="Date",
        y="Publications")
 
 publications+theme_ADC()
+
+```
+
+```{r percent-graph, echo=FALSE}
+percents<-ggplot()+
+  geom_point(data = website_summary_metrics, aes(x=Date, y=Pub_Percent),color="#1D244E",size=2.5)+
+  geom_point(data = website_summary_metrics, aes(x=Date, y=Data_Percent),color="#19B369",size=2.5)+
+  geom_point(data = website_summary_metrics, aes(x=Date, y=Submit_Percent),color="#79FDB1",size=2.5)+
+  labs(title='Percentage of Total Views by Page Type',
+       x="Date",
+       y="Percent (%)")
+
+
+percents+theme_ADC()
 
 ```
