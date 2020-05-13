@@ -1,0 +1,126 @@
+---
+title: "Website Analytics - Arctic Data Center"
+date: "Last Updated May 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Arctic Data Center Website Metrics
+
+In addition to tracking Twitter metrics, I'm also interested in tracking traffic to arcticdata.io and different pages within that domain. 
+
+# Data Collection - Summary
+
+I collected data manually from Google Analytics once a month near the first of each month and added it to the folder Website Metrics. This summary file contains:
+
+* **month**: month of Tweet information
+* **year**: year of Tweet information
+* **date**: formatted the month as the first day of the months o that the date would format nicely for as.Date
+* **pubs_view**: number of pageviews for the publications page - https://arcticdata.io/publications/
+* **home_view**: number of pageviews for the home page - https://arcticdata.io/
+* **catalog_view**: number of pageviews for the catalog page - https://arcticdata.io/catalog
+* **catalogdata_view**: number of pageviews for the catalog/data page - https://arcticdata.io/catalog/data
+    * This is the page that people are directed to when they go back to the search from the Metacat site rather than the Wordpress site.
+* **data_view**: number of pageviews for the data page
+    * In October 2018, the catalog page was created - before that time, the data page URL was https://arcticdata.io/data. On and before October 2018, these are the pageviews for https://arcticdata.io/data. On and after November 2018, this variable is the sum of the catalog_view and catalogdata_view.
+* **submit_view**: number of pageviews for the data submission page - https://arcticdata.io/catalog/submit
+* **site_view**: Number of pageviews for the entire arcticdata.io domain.
+    * These are all the total pageview count for the associated pages, which is a total count and doesn't exclude repeat visitors or Arctic Data Center staff views.
+
+## Data Analysis
+
+```{r load-packages, echo=FALSE}
+library(readr)
+library(knitr)
+library(ggplot2)
+
+```
+
+```{r raw-data, echo=FALSE,results=FALSE,message=FALSE}
+website_summary_metrics <- read_csv("~/Documents/Twitter Analytics/Raw Data/website_summary_metrics.csv")
+website_summary_metrics$Date <-as.Date(website_summary_metrics$Date) 
+```
+
+```{r display-table, echo=FALSE}
+knitr::kable(website_summary_metrics, caption = "Website Metrics Table")
+```
+
+## Graphing Data
+
+```{r creating-custom-theme, echo=FALSE,results=FALSE,message=FALSE}
+theme_ADC<- function() {
+  theme_bw(base_size=12,base_family="Helvetica") %+replace%
+    theme(
+      plot.title=element_text(size=20, face="bold",margin=margin(10,0,10,0),color="#1D244F"),
+        axis.text.x = element_text(angle=50, size=10, vjust=0.5, color="#1D244F"),
+        axis.text.y = element_text(size=10, color="#1D244F"),
+        axis.title.x = element_text(color="#1D244F",vjust=-.5,size=14),
+        axis.title.y = element_text(color="#1D244F",angle=90,vjust=.5,size=14),
+        panel.background=element_rect(fill="white"),
+        axis.line = element_line(color="#1D244F"),
+      panel.grid.major = element_line(colour = "white", size = 0.2), 
+    panel.grid.minor = element_line(colour = "white", size = 0.5),
+    )
+}
+```
+
+```{r monthly-views, echo=FALSE,results=FALSE,message=FALSE}
+monthlyviews<-ggplot(data = website_summary_metrics, aes(x=Date, y=Home_View)) +
+  geom_point(color="#156760",size=2.5)+
+  labs(title='Monthly Page Views Over Time',
+       x="Date",
+       y="Page Views")
+
+monthlyviews+theme_ADC()
+```
+
+```{r searcher-views, echo=FALSE}
+
+lm_eqn <- function(website_summary_metrics){
+    m <- lm(Data_View ~ Date, website_summary_metrics);
+    eq <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2, 
+         list(a = format(unname(coef(m)[1]), digits = 2),
+              b = format(unname(coef(m)[2]), digits = 2),
+             r2 = format(summary(m)$r.squared, digits = 3)))
+    as.character(as.expression(eq));
+}
+
+searchers<-ggplot(data = website_summary_metrics, aes(x=Date, y=Data_View)) +
+  geom_point(color="#156760",size=2.5)+
+  labs(title='Monthly Search Catalog Page Views Over Time',
+       x="Date",
+       y="Search Catalog Page Views")+
+  stat_smooth(method="lm", se=FALSE, color="#B4E6EA")
+
+searchers+theme_ADC() + 
+  geom_text(data=website_summary_metrics[40, ], y=1100, label = lm_eqn(website_summary_metrics), parse = TRUE)
+
+
+
+```
+
+
+```{r submitters, echo=FALSE}
+submitters<-ggplot(data = website_summary_metrics, aes(x=Date, y=Submit_View)) +
+  geom_point(color="#156760",size=2.5)+
+    labs(title='Monthly Sumbit Page Visits Over Time',
+       x="Date",
+       y="Submit Page Visits")
+
+submitters+theme_ADC()
+```
+
+
+```{r publications, echo=FALSE}
+publications<-ggplot(data = website_summary_metrics, aes(x=Date, y=Pubs_View)) +
+  geom_point(color="#156760",size=2.5)+
+  labs(title='Monthly Publications Page Visits Over Time',
+       x="Tweets",
+       y="Publications")
+
+publications+theme_ADC()
+
+```
