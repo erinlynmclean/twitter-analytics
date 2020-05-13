@@ -26,7 +26,7 @@ I collected data manually from https://analytics.twitter.com/user/arcticdatactr/
 * tweet-impressions: Number of times users are served your tweet in timeline, search results, or from your profile
 * mentions: Number of times your @username was mentioned in tweets
 * number-followers: Number of followers, manually copied from https://twitter.com/arcticdatactr. 
-** Number of followers is the only piece of data in this file that is only available from Twitter at the time you access the site i.e. it is not made available with the rest of the data in this dataset. Thus, there are NAs for dates prior to the time I started to collect this data or for dates before I realized this data was ephemeral.
+    * Number of followers is the only piece of data in this file that is only available from Twitter at the time you access the site i.e. it is not made available with the rest of the data in this dataset. Thus, there are NAs for dates prior to the time I started to collect this data or for dates before I realized this data was ephemeral.
 
 # Data Collection - Monthly Tweets
 
@@ -60,6 +60,9 @@ Other metrics that are collected are all about promoted views, etc. which the Ar
 library(readr)
 library(knitr)
 library(ggplot2)
+library(rtweet)
+library(dplyr)
+library(kableExtra)
 ```
 
 ```{r raw-data, echo=FALSE,results=FALSE,message=FALSE}
@@ -71,7 +74,7 @@ twitter_summary_metrics$Date <-as.Date(twitter_summary_metrics$Date)
 knitr::kable(twitter_summary_metrics, caption = "Twitter Metrics Table")
 ```
 
-## Graphing Data
+## Graphing Data - Summary Info
 
 ```{r creating-custom-theme, echo=FALSE,results=FALSE,message=FALSE}
 theme_ADC<- function() {
@@ -135,4 +138,23 @@ tweetimpressions+theme_ADC()
 
 ```
 
+## Data Analysis - Tweet Level Info
 
+```{r twitter-data, echo=FALSE}
+ADC <- get_timeline("@ArcticDataCtr", n= 3200)
+
+#Remove retweets
+ADC_tweets_organic <- ADC[ADC$is_retweet==FALSE, ] 
+# Remove replies
+ADC_tweets_organic <- subset(ADC_tweets_organic, is.na(ADC_tweets_organic$reply_to_status_id)) 
+
+#Most Liked Tweets
+ADC_tweets_organic <- ADC_tweets_organic %>% arrange(-favorite_count)
+ADC_tweets_organic$created_at <-as.Date(ADC_tweets_organic$created_at) 
+ADC_tweets_fav <- select(ADC_tweets_organic,text,created_at,favorite_count, retweet_count,hashtags)
+ADC_tweets_fav <- ADC_tweets_fav[1:10,]
+
+ADC_tweets_fav %>% 
+  kable(col.names=c("Tweet","Date","Number of Likes","Number of Retweets", "Hashtags Used")) %>% 
+  kable_styling() 
+```
