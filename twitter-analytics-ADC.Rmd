@@ -1,7 +1,6 @@
 ---
-title: "Twitter Analytics"
-author: "Erin McLean"
-date: "5/8/2020"
+title: "Twitter Analytics - Arctic Data Center"
+date: "Last Updated May 2020"
 output: html_document
 ---
 
@@ -26,11 +25,12 @@ I collected data manually from https://analytics.twitter.com/user/arcticdatactr/
 * new-followers: Number of new followers you gained (equals gross new followers; does not account for followers lost)
 * tweet-impressions: Number of times users are served your tweet in timeline, search results, or from your profile
 * mentions: Number of times your @username was mentioned in tweets
-* number-followers: Number of followers, manually copied from https://twitter.com/arcticdatactr. Number of followers is the only piece of data in this file that is only available from Twitter at the time you access the site i.e. it is not made available with the rest of the data in this dataset. Thus, there are NAs for dates prior to the time I started to collect this data or for dates before I realized this data was ephemeral.
+* number-followers: Number of followers, manually copied from https://twitter.com/arcticdatactr. 
+** Number of followers is the only piece of data in this file that is only available from Twitter at the time you access the site i.e. it is not made available with the rest of the data in this dataset. Thus, there are NAs for dates prior to the time I started to collect this data or for dates before I realized this data was ephemeral.
 
 # Data Collection - Monthly Tweets
 
-I collected tweet from https://analytics.twitter.com/user/arcticdatactr/home once a month near the first of each month and added it to the folder Twitter Metrics. These monthly files contain:
+I collected tweets from https://analytics.twitter.com/user/arcticdatactr/home once a month near the first of each month and added it to the folder Twitter Metrics. These monthly files contain:
 
 * Tweet-ID: the identifier for the Tweet, which can be used to find the permanent URL
 * Tweet-permalink: where to find the Tweet
@@ -52,14 +52,87 @@ I collected tweet from https://analytics.twitter.com/user/arcticdatactr/home onc
 * media-views: 
 * media-engagements:
 
-Other metrics that are collected are all about promoted views, etc. which the Arctic Data Center doesn't use, and as such thsoe were excluded from the analysis.
+Other metrics that are collected are all about promoted views, etc. which the Arctic Data Center doesn't use, and as such those were excluded from the analysis.
 
 ## Data Analysis
 
-# Load packages
-
-```{r pressure, echo=FALSE}
-usethis::use_github()
+```{r load-packages, echo=FALSE}
+library(readr)
+library(knitr)
+library(ggplot2)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r raw-data, echo=FALSE,results=FALSE,message=FALSE}
+twitter_summary_metrics <- read_csv("~/Documents/Twitter Analytics/Raw Data/twitter-summary-metrics.csv")
+twitter_summary_metrics$Date <-as.Date(twitter_summary_metrics$Date) 
+```
+
+```{r display-table, echo=FALSE}
+knitr::kable(twitter_summary_metrics, caption = "Twitter Metrics Table")
+```
+
+## Graphing Data
+
+```{r creating-custom-theme, echo=FALSE,results=FALSE,message=FALSE}
+theme_ADC<- function() {
+  theme_bw(base_size=12,base_family="Helvetica") %+replace%
+    theme(
+      plot.title=element_text(size=20, face="bold",margin=margin(10,0,10,0),color="#1D244F"),
+        axis.text.x = element_text(angle=50, size=10, vjust=0.5, color="#1D244F"),
+        axis.text.y = element_text(size=10, color="#1D244F"),
+        axis.title.x = element_text(color="#1D244F",vjust=-.5,size=14),
+        axis.title.y = element_text(color="#1D244F",angle=90,vjust=.5,size=14),
+        panel.background=element_rect(fill="white"),
+        axis.line = element_line(color="#1D244F"),
+      panel.grid.major = element_line(colour = "white", size = 0.2), 
+    panel.grid.minor = element_line(colour = "white", size = 0.5),
+    )
+}
+```
+
+```{r monthly-tweets, echo=FALSE,results=FALSE,message=FALSE}
+monthlytweets<-ggplot(data = twitter_summary_metrics, aes(x=Date, y=Tweets)) +
+  geom_point(color="#156760",size=2.5)
+  labs(title='Number of Monthly Tweets Over Time',
+       x="Date",
+       y="Tweets")
+
+monthlytweets+theme_ADC()
+```
+
+```{r followers, echo=FALSE}
+followers<-ggplot(data = twitter_summary_metrics, aes(x=Date, y=New_Followers)) +
+  geom_point(color="#156760",size=2.5)+
+  labs(title='Number of Monthly Followers Over Time',
+       x="Date",
+       y="Followers")
+
+followers+theme_ADC()
+
+```
+
+
+```{r impressions, echo=FALSE}
+impressions<-ggplot(data = twitter_summary_metrics, aes(x=Date, y=Tweet_Impressions)) +
+  geom_point(color="#156760",size=2.5)+
+    labs(title='Number of Monthly Impressions Over Time',
+       x="Date",
+       y="Impressions")
+
+impressions+theme_ADC()
+```
+
+
+```{r tweet-impressions, echo=FALSE}
+tweetimpressions<-ggplot(data = twitter_summary_metrics, aes(x=Tweets, y=Tweet_Impressions)) +
+  geom_point(color="#156760",size=2.5)+
+  labs(title='Impact of Tweets on Impressions',
+       x="Tweets",
+       y="Impressions")+
+  stat_smooth(method="lm", se=FALSE, color="#B4E6EA")
+
+tweetimpressions+theme_ADC()
+
+```
+
+
