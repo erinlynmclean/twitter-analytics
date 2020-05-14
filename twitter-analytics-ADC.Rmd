@@ -63,6 +63,9 @@ library(ggplot2)
 library(rtweet)
 library(dplyr)
 library(kableExtra)
+library(formattable)
+library(data.table)
+library(dendroTools)
 ```
 
 ```{r raw-data, echo=FALSE,results=FALSE,message=FALSE}
@@ -143,18 +146,80 @@ tweetimpressions+theme_ADC()
 ```{r twitter-data, echo=FALSE}
 ADC <- get_timeline("@ArcticDataCtr", n= 3200)
 
+#Creating an organic tweet list
 #Remove retweets
 ADC_tweets_organic <- ADC[ADC$is_retweet==FALSE, ] 
 # Remove replies
 ADC_tweets_organic <- subset(ADC_tweets_organic, is.na(ADC_tweets_organic$reply_to_status_id)) 
+ADC_tweets_organic$created_at <-as.character.Date(ADC_tweets_organic$created_at) 
+ADC_tweets_organic$hashtags <-as.list(ADC_tweets_organic$hashtags) 
 
-#Most Liked Tweets
+#Keeping ONLY the retweets
+ADC_retweets <- ADC[ADC$is_retweet==TRUE, ] 
+
+#Keeping ONLY the replies
+ADC_replies <- subset(ADC, !is.na(ADC$reply_to_status_id))
+```
+
+### Top 10: Most Liked Tweets
+```{r twitter-faves, echo=FALSE}
+
 ADC_tweets_organic <- ADC_tweets_organic %>% arrange(-favorite_count)
-ADC_tweets_organic$created_at <-as.Date(ADC_tweets_organic$created_at) 
 ADC_tweets_fav <- select(ADC_tweets_organic,text,created_at,favorite_count, retweet_count,hashtags)
 ADC_tweets_fav <- ADC_tweets_fav[1:10,]
 
 ADC_tweets_fav %>% 
-  kable(col.names=c("Tweet","Date","Number of Likes","Number of Retweets", "Hashtags Used")) %>% 
-  kable_styling() 
+  kable(col.names=c("Tweet","Date and Time","Likes","Retweets", "Hashtags Used")) %>% 
+  kable_styling() %>% 
+  column_spec(2,width="10em") %>% 
+  column_spec(1,width="35em") %>% 
+  column_spec(5,width="10em") 
+
+```
+### Top 10: Most Retweeted Tweets
+
+```{r twitter-retweets, echo=FALSE}
+
+ADC_tweets_organic <- ADC_tweets_organic %>% arrange(-retweet_count)
+ADC_tweets_retweets <- select(ADC_tweets_organic,text,created_at,favorite_count, retweet_count,hashtags)
+ADC_tweets_retweets <- ADC_tweets_retweets[1:10,]
+
+ADC_tweets_retweets %>% 
+  kable(col.names=c("Tweet","Date and Time","Likes","Retweets", "Hashtags Used")) %>% 
+  kable_styling() %>% 
+  column_spec(2,width="10em") %>% 
+  column_spec(1,width="35em") %>% 
+  column_spec(5,width="10em") 
+
+```
+
+### Distribution of replies, retweets, and organic tweets
+
+```{r twitter-ratio, echo=FALSE}
+
+tweet_ratio <- data.frame(
+  category=c("Retweets", "Replies", "Organic Tweets"),
+  count=c(nrow(ADC_retweets), nrow(ADC_replies), nrow(ADC_tweets_organic))
+)
+
+# Adding calculated data columns
+tweet_ratio$fraction = tweet_ratio$count / sum(tweet_ratio$count)
+tweet_ratio$percentage = tweet_ratio$count / sum(tweet_ratio$count) * 100
+tweet_ratio$ymax = cumsum(tweet_ratio$fraction)
+tweet_ratio$ymin = c(0, head(tweet_ratio$ymax, n=-1))
+
+#Rounding to two decimal points
+tweet_ratio<-round_df(tweet_ratio,2)
+
+#Creating the legend
+TweetType<-paste(tweet_ratio$category, tweet_ratio$percentage, "%")
+
+#Plotting the data
+ggplot(tweet_ratio,aes(ymax=ymax, ymin=ymin, xmax=4,xmin=3,fill=TweetType))+
+  geom_rect()+
+  coord_polar(theta="y")+
+  xlim(c(2,4))+
+  theme_void()+
+  theme(legend.position = "right")+ 
+  scale_fill_manual(values=c( "#79FDB1","#B4E6EA","#1D244E"))
 ```
