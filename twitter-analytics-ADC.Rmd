@@ -56,16 +56,21 @@ Other metrics that are collected are all about promoted views, etc. which the Ar
 
 ## Data Analysis
 
-```{r load-packages, echo=FALSE}
+```{r load-packages, echo=FALSE,results=FALSE,message=FALSE}
 library(readr)
+library(tidyr)
 library(knitr)
 library(ggplot2)
 library(rtweet)
 library(dplyr)
+library(tidytext)
 library(kableExtra)
 library(formattable)
 library(data.table)
 library(dendroTools)
+library(cowplot)
+library(tm)
+library(tokenizers)
 ```
 
 ```{r raw-data, echo=FALSE,results=FALSE,message=FALSE}
@@ -74,7 +79,7 @@ twitter_summary_metrics$Date <-as.Date(twitter_summary_metrics$Date)
 ```
 
 ```{r display-table, echo=FALSE}
-knitr::kable(twitter_summary_metrics, caption = "Twitter Metrics Table")
+#knitr::kable(twitter_summary_metrics, caption = "Twitter Metrics Table")
 ```
 
 ## Graphing Data - Summary Info
@@ -83,11 +88,12 @@ knitr::kable(twitter_summary_metrics, caption = "Twitter Metrics Table")
 theme_ADC<- function() {
   theme_bw(base_size=12,base_family="Helvetica") %+replace%
     theme(
-      plot.title=element_text(size=20, face="bold",margin=margin(10,0,10,0),color="#1D244F"),
-        axis.text.x = element_text(angle=50, size=10, vjust=0.5, color="#1D244F"),
-        axis.text.y = element_text(size=10, color="#1D244F"),
-        axis.title.x = element_text(color="#1D244F",vjust=-.5,size=14),
-        axis.title.y = element_text(color="#1D244F",angle=90,vjust=.5,size=14),
+      plot.title=element_text(size=11, face="bold",margin=margin(10,0,10,0),color="#1D244F"),
+      plot.subtitle = element_text(size=10,margin=margin(0,0,10,0),color="#1D244F"),
+        axis.text.x = element_text(angle=50, size=8, vjust=0.5, color="#1D244F"),
+        axis.text.y = element_text(size=8, color="#1D244F"),
+        axis.title.x = element_text(color="#1D244F",vjust=-.5,size=10),
+        axis.title.y = element_text(color="#1D244F",angle=90,vjust=.5,size=10),
         panel.background=element_rect(fill="white"),
         axis.line = element_line(color="#1D244F"),
       panel.grid.major = element_line(colour = "white", size = 0.2), 
@@ -98,22 +104,22 @@ theme_ADC<- function() {
 
 ```{r monthly-tweets, echo=FALSE,results=FALSE,message=FALSE}
 monthlytweets<-ggplot(data = twitter_summary_metrics, aes(x=Date, y=Tweets)) +
-  geom_point(color="#156760",size=2.5)
+  geom_line(color="#156760",size=1.5)+
   labs(title='Number of Monthly Tweets Over Time',
        x="Date",
        y="Tweets")
 
-monthlytweets+theme_ADC()
+monthlytweets<-monthlytweets+theme_ADC()
 ```
 
 ```{r followers, echo=FALSE}
 followers<-ggplot(data = twitter_summary_metrics, aes(x=Date, y=New_Followers)) +
-  geom_point(color="#156760",size=2.5)+
+  geom_line(color="#156760",size=1.5)+
   labs(title='Number of Monthly Followers Over Time',
        x="Date",
        y="Followers")
 
-followers+theme_ADC()
+followers<-followers+theme_ADC()
 
 ```
 
@@ -125,7 +131,7 @@ impressions<-ggplot(data = twitter_summary_metrics, aes(x=Date, y=Tweet_Impressi
        x="Date",
        y="Impressions")
 
-impressions+theme_ADC()
+impressions<-impressions+theme_ADC()
 ```
 
 
@@ -135,9 +141,16 @@ tweetimpressions<-ggplot(data = twitter_summary_metrics, aes(x=Tweets, y=Tweet_I
   labs(title='Impact of Tweets on Impressions',
        x="Tweets",
        y="Impressions")+
-  stat_smooth(method="lm", se=FALSE, color="#B4E6EA")
+  stat_smooth(method="lm", se=FALSE, color="#B4E6EA",size=1)
 
-tweetimpressions+theme_ADC()
+tweetimpressions<-tweetimpressions+theme_ADC()
+
+```
+
+```{r 4-graphs, echo=FALSE}
+plot_grid(monthlytweets,followers,impressions,tweetimpressions,
+          ncol=2, nrow=2,
+          rel_widths = c(1.5,1.5,1.5,1.5))
 
 ```
 
@@ -223,3 +236,53 @@ ggplot(tweet_ratio,aes(ymax=ymax, ymin=ymin, xmax=4,xmin=3,fill=TweetType))+
   theme(legend.position = "right")+ 
   scale_fill_manual(values=c( "#79FDB1","#B4E6EA","#1D244E"))
 ```
+
+## Analyzing text of tweets
+
+```{r text-analysis, echo=FALSE}
+#Remove retweets
+ADC_tweets_organic <- ADC[ADC$is_retweet==FALSE, ] 
+# Remove replies
+ADC_tweets_organic <- subset(ADC_tweets_organic, is.na(ADC_tweets_organic$reply_to_status_id)) 
+
+ADC_text_tweets <- ADC_tweets_organic %>%
+  select(text) %>%
+  unnest_tokens(word, text)
+
+#cleaning organic tweets of any characters we don't want to show in the analysis, like @ or links
+ADC_text_tweets$word <-  gsub("https\\S*", "", ADC_text_tweets$word)
+ADC_text_tweets$word <-  gsub("@\\S*", "", ADC_text_tweets$word) 
+ADC_text_tweets$word  <-  gsub("amp", "", ADC_text_tweets$word) 
+#ADC_text_tweets$word  <-  gsub("[\r\n]", "", ADC_text_tweets$word)
+#ADC_text_tweets$word  <-  gsub("[:digit:]", "", ADC_text_tweets$word)
+#ADC_text_tweets$word  <-  gsub("[:punct:]", "", ADC_text_tweets$word)
+
+#removing stop words from the text
+
+ADC_text_tweets<-as.data.frame(ADC_text_tweets,na.rm=TRUE)
+ADC_text_tweets$word<-as.character(ADC_text_tweets$word)
+
+all_stops <- as.data.frame(stopwords("en"))
+colnames(all_stops)<- c("word")
+all_stops$word<-as.character(all_stops$word)
+
+ADC_text_tweets_cleaned <-ADC_text_tweets[!ADC_text_tweets$word%in%all_stops$word,]
+
+ADC_text_tweets_cleaned<-as.data.frame(table(ADC_text_tweets_cleaned))
+
+ADC_text_tweets_cleaned <- ADC_text_tweets_cleaned %>% arrange(-Freq)
+ADC_text_tweets_cleaned <- ADC_text_tweets_cleaned[c(3:5, 7:10, 12:15,18:21),]
+
+ADC_text_tweets_cleanedgraph<-ADC_text_tweets_cleaned %>% 
+  ggplot(aes(x=reorder(ADC_text_tweets_cleaned,Freq),y=Freq))+
+  geom_col(fill="#156760", color="#79FDB1")+
+  coord_flip() +
+  labs(y="Count",
+      x="Unique Words",
+      title="Top 15 frequently used words in the Arctic Data Center's tweets",
+      caption ="Common stop words removed from list.")
+
+ADC_text_tweets_cleanedgraph+theme_ADC()
+```
+
+
