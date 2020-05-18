@@ -71,6 +71,17 @@ library(dendroTools)
 library(cowplot)
 library(tm)
 library(tokenizers)
+library(tidyverse)
+library(wordcloud)
+library(SnowballC)
+library(RColorBrewer)
+library(wordcloud2)
+library(widyr)
+library(igraph)
+library(ggraph)
+library(topicmodels)
+library(DataCombine)
+library(ggThemeAssist)
 ```
 
 ```{r raw-data, echo=FALSE,results=FALSE,message=FALSE}
