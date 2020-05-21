@@ -78,10 +78,12 @@ library(RColorBrewer)
 library(wordcloud2)
 library(widyr)
 library(igraph)
-library(ggraph)
 library(topicmodels)
 library(DataCombine)
 library(ggThemeAssist)
+library(quanteda)
+library(data.table)
+library(lubridate)
 ```
 
 ```{r raw-data, echo=FALSE,results=FALSE,message=FALSE}
@@ -296,4 +298,61 @@ ADC_text_tweets_cleanedgraph<-ADC_text_tweets_cleaned %>%
 ADC_text_tweets_cleanedgraph+theme_ADC()
 ```
 
+## Using tidytext, tm, and quanteda to make some cute wordclouds and plots
 
+```{r word-clouds, echo=FALSE,results=FALSE, message=FALSE}
+
+#reducing file to text only
+text_only <- ADC_tweets_organic$text
+
+#Load the data as a corpus
+docs <- Corpus(VectorSource(text_only))
+
+# Cleaning up data
+
+# Remove numbers
+docs <- tm_map(docs, removeNumbers)
+
+# Remove english common stopwords
+docs <- tm_map(docs, removeWords, all_stops)
+docs <- tm_map(docs, removeWords, stopwords("english"))
+
+# Remove punctuations
+docs <- tm_map(docs, removePunctuation)
+
+# Eliminate extra white spaces
+docs <- tm_map(docs, stripWhitespace)
+
+# I have found this text stemming function to be quite squirrely. It is supposed to reduce words like "sciences" down to "science" so they can be considered the same word but it is frequently chopping the s or ed of of words it should not.
+# Text stemming
+# docs <- tm_map(docs, stemDocument)
+# Removing words I don't want
+docs <- tm_map(docs, removeWords, c("center", "amp", "arcticdatactr","may", "this","were","one","can","the"))
+               
+#Building a term document matrix for tweets
+dtm <- TermDocumentMatrix(docs)
+
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+head(d, 100)
+
+d<-d[1:80,]
+
+#set.seed(1234)
+#wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+      #  max.words=100, random.order=FALSE, rot.per=0.35, 
+     #  colors=brewer.pal(8, "Dark2"), scale=c(3.3,0.25))
+
+#set.seed(1234)
+#wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+       # max.words=80, random.order=FALSE, rot.per=0.35, 
+      # colors=brewer.pal(10, "Dark2"), scale=c(5.3,0.25))
+
+ADC_color_pal <- c("#1D244E","#1D244E","#1D244E","#1D244E","#1D244E","#1D244E","#1D244E","#1D244E","#1D244E","#1D244E","#1D244E","#B3E1E7","#B3E1E7","#B3E1E7","#B3E1E7","#B3E1E7","#B3E1E7","#B3E1E7","#B3E1E7","#B3E1E7","#B3E1E7","#B3E1E7","#19B369","#19B369","#19B369","#19B369","#19B369","#19B369","#19B369","#19B369","#19B369","#19B369","#19B369","#79FD81","#79FD81","#79FD81","#79FD81","#79FD81","#79FD81","#79FD81","#79FD81","#79FD81","#79FD81","#79FD81","#146660","#146660","#146660","#146660","#146660","#146660","#146660","#146660","#146660","#146660","#146660","#1B887E","#1B887E","#1B887E","#1B887E","#1B887E","#1B887E","#1B887E","#1B887E","#1B887E","#1B887E","#1B887E","#767171","#767171","#767171","#767171","#767171","#767171","#767171","#767171","#767171","#767171","#767171","#767171","#767171","#767171")
+set.seed(1234)
+wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+         random.order=FALSE, ordered.colors=TRUE, rot.per=0.35, 
+       colors= ADC_color_pal, scale=c(7,.5))
+
+```
