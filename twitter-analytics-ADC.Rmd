@@ -65,6 +65,7 @@ library(rtweet)
 library(dplyr)
 library(tidytext)
 library(kableExtra)
+library(ggraph)
 library(formattable)
 library(data.table)
 library(dendroTools)
@@ -355,4 +356,87 @@ wordcloud(words = d$word, freq = d$freq, min.freq = 1,
          random.order=FALSE, ordered.colors=TRUE, rot.per=0.35, 
        colors= ADC_color_pal, scale=c(7,.5))
 
+```
+
+```{r tidy-tweets, echo=FALSE, message=FALSE,warning=FALSE}
+tidy_tweets  <- ADC_tweets_organic %>%
+  unnest_tokens(word, 'text')
+
+# Now that the data is in one-word-per-row format, we can manipulate it with tidy tools like dplyr. 
+data(stop_words)
+tidy_tweets  <- tidy_tweets  %>%
+  anti_join(stop_words)
+
+# Removing uninformative words
+my_stopwords <- tibble(word = c(as.character(1:3), "center", "arcticdatactr", "https", "amp", "t.co", "dataoneorg"))
+
+tidy_tweets  <- tidy_tweets  %>% 
+  anti_join(my_stopwords)
+
+# Removing symbols
+remove_reg <- "&amp;|&lt;|&gt;."
+
+tidy_tweets  <- tidy_tweets  %>% 
+  mutate(text = str_remove_all(word, remove_reg))
+
+# removing any rows with numbers in the word column
+tidy_tweets  <- tidy_tweets  %>% 
+  filter(!str_detect(word, "\\d"))
+
+# This is making all the words uppercase. I find this aesthetically pleasing but feel free to delete
+tidy_tweets <- tidy_tweets %>% 
+  mutate(word = toupper(word))
+
+#We can use dplyr’s count() to find the most common words in all the tweets as a whole.
+#tidy_tweets  %>%
+  #count(word, sort = TRUE) 
+
+# Making sure each word is used 10 or more times
+#tidy_tweet_10 <- tidy_tweets %>%
+ #count(word, sort = TRUE) %>%
+  #filter(n > 10) 
+
+#set.seed(1234)
+#wordcloud(words = tidy_tweet_10$word, freq = tidy_tweet_10$n, min.freq = 1,
+         # max.words=50, random.order=FALSE, rot.per=0.35, 
+          #colors=brewer.pal(8, "Dark2"), scale=c(5,0.35))
+
+# Making sure each word is used at least 5x
+tidy_tweet_5 <- tidy_tweets %>%
+  count(word, sort = TRUE) %>%
+  filter(n > 5) 
+
+set.seed(1234)
+wordcloud2(data = tidy_tweet_5, color = ADC_color_pal, backgroundColor="white", size = 1) 
+```
+
+# Using tidy text to look for correlations within Arctic Data Center tweets
+
+```{r echo=FALSE, message=FALSE,warning=FALSE}
+# Using tidy text to look for correlations within ADC tweets
+ADC_tweets <- tibble(id = tidy_tweets$created_at, 
+                         title = tidy_tweets$text)
+
+# View (ADC tweets)
+ADC_tweets <- ADC_tweets %>% 
+  unnest_tokens(word, title) %>% 
+  anti_join(stop_words)
+
+
+# We can use pairwise_count() from the widyr package to count how many times each pair of words occurs together in a title or description field.
+tweet_word_pairs <- ADC_tweets %>% 
+  pairwise_count(word, id, sort = TRUE, upper = FALSE)
+
+#fun graph showing connections between words
+set.seed(1234)
+tweet_word_pairs %>%
+  filter(n >= 12) %>%
+  graph_from_data_frame() %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n, edge_width = n), edge_colour = "#156760") +
+  geom_node_point(size = 5) +
+  geom_node_text(aes(label = name), repel = TRUE, 
+                 point.padding = unit(0.2, "lines")) +
+  theme_void() +
+  ggtitle("Word Network - Arctic Data Center Tweets")
 ```
