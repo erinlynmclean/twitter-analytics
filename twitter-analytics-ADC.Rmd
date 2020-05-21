@@ -300,7 +300,7 @@ ADC_text_tweets_cleanedgraph+theme_ADC()
 
 ## Using tidytext, tm, and quanteda to make some cute wordclouds and plots
 
-```{r word-clouds, echo=FALSE,results=FALSE, message=FALSE}
+```{r word-clouds, echo=FALSE,results=FALSE, message=FALSE,warning=FALSE}
 
 #reducing file to text only
 text_only <- ADC_tweets_organic$text
@@ -314,7 +314,7 @@ docs <- Corpus(VectorSource(text_only))
 docs <- tm_map(docs, removeNumbers)
 
 # Remove english common stopwords
-docs <- tm_map(docs, removeWords, all_stops)
+docs <- tm_map(docs, removeWords, all_stops$word)
 docs <- tm_map(docs, removeWords, stopwords("english"))
 
 # Remove punctuations
