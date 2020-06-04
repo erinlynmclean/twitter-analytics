@@ -56,6 +56,7 @@ library(readr)
 library(tidyr)
 library(knitr)
 library(ggplot2)
+library(syuzhet)
 library(rtweet)
 library(dplyr)
 library(tidytext)
@@ -88,7 +89,7 @@ twitter_summary_metrics <- read_csv("~/Documents/Twitter Analytics/Raw Data/twit
 twitter_summary_metrics$Date <-as.Date(twitter_summary_metrics$Date) 
 ```
 
-```{r creating-custom-theme, echo=FALSE,results=FALSE,message=FALSE}
+```{r creating-custom-theme-colors, echo=FALSE,results=FALSE,message=FALSE}
 theme_ADC<- function() {
   theme_bw(base_size=12,base_family="Helvetica") %+replace%
     theme(
@@ -114,39 +115,6 @@ ADC_colors <- c(
   `dark teal`="#1B887E",
   `grey`="#767171",
   `black`="#000000")
-
-ADC_cols <- function(...) {
-  cols <- c(...)
-
-  if (is.null(cols))
-    return (ADC_colors)
-
-  ADC_colors[cols]
-}
-
-ADC_palettes<-
-  list(
-    `main`=ADC_cols("navy","light blue","teal","light green"),
-    `all`=ADC_cols("navy","light blue","teal","light green","green","dark teal","grey","black")
-  )
-
-ADC_pal <- function(palette = "all", reverse = FALSE, ...) {
-  pal <- ADC_palettes[[palette]]
-
-  if (reverse) pal <- rev(pal)
-
-  colorRampPalette(pal, ...)
-}
-
-scale_color_ADC <- function(palette = "all", discrete = TRUE, reverse = FALSE, ...) {
-  pal <- ADC_pal(palette = palette, reverse = reverse)
-
-  if (discrete) {
-    discrete_scale("colour", paste0("ADC_", palette), palette = pal, ...)
-  } else {
-    scale_color_gradientn(colours = pal(256), ...)
-  }
-}
 ```
 
 ## Summary Information
@@ -330,6 +298,46 @@ ADC_text_tweets_cleanedgraph<-ADC_text_tweets_cleaned %>%
 ADC_text_tweets_cleanedgraph+theme_ADC()
 ```
 
-```{r  echo=FALSE, message=FALSE,warning=FALSE}
+### Showing the most frequently used hashtags
+```{r hashtags, echo=FALSE, warning=FALSE}
+ADC_tweets_organic$hashtags <- as.character(ADC_tweets_organic$hashtags)
+ADC_tweets_organic$hashtags <- gsub("c\\(", "", ADC_tweets_organic$hashtags)
+
+set.seed(1234)
+wordcloud(ADC_tweets_organic$hashtags, min.freq=4, scale=c(6, .75), random.order=FALSE, rot.per=0.45, 
+          colors=ADC_colors)
+```
+
+### Understanding what accounts we frequently retweet
+```{r retweet-tracker, echo=FALSE, warning=FALSE}
+set.seed(1234)
+wordcloud(ADC_retweets$retweet_screen_name, min.freq=3, scale=c(4, .75), random.order=FALSE, rot.per=0.55, 
+          colors=ADC_colors)
+
+```
+
+### Understanding what accounts we frequently retweet
+```{r sentiment-tracker, echo=FALSE, warning=FALSE}
+
+# Converting tweets to ASCII to trackle strange characters
+ADC_text_tweets <- iconv(ADC_text_tweets, from="UTF-8", to="ASCII", sub="")
+
+#ADC_text_tweets_cleaned<-as.vector(ADC_text_tweets_cleaned["ADC_text_tweets_cleaned"],mode = "character")
+
+ADC_sentiment<-get_nrc_sentiment((ADC_text_tweets),language="english")
+ADC_sentimentscores<-data.frame(colSums(ADC_sentiment[,]))
+
+names(ADC_sentimentscores) <- "Score"
+
+ADC_sentimentscores <- cbind("sentiment"=rownames(ADC_sentimentscores),ADC_sentimentscores)
+rownames(ADC_sentimentscores) <- NULL
+
+sentiment_graph<-ggplot(data=ADC_sentimentscores,aes(x=sentiment,y=Score))+
+  geom_bar(aes(fill=sentiment),stat = "identity",)+
+  xlab("Sentiments")+ylab("Scores")+
+  ggtitle("Total sentiment based on scores")+
+  scale_fill_manual(values=c("#1D244E","#B3E1E7","dark grey","#19B369","#79FD81","#767171","#146660","#000000","light grey","#1B887E"))
+
+sentiment_graph+theme_ADC()+theme(legend.position="none")
 
 ```
