@@ -187,6 +187,43 @@ ADC_retweets <- ADC[ADC$is_retweet==TRUE, ]
 
 #Keeping ONLY the replies
 ADC_replies <- subset(ADC, !is.na(ADC$reply_to_status_id))
+
+#Separating by date
+ADC_2020<-subset(ADC, created_at > as.Date("2020-03-01"))
+#Remove retweets
+ADC_2020tweets_organic <- ADC_2020[ADC_2020$is_retweet==FALSE, ] 
+# Remove replies
+ADC_2020tweets_organic <- subset(ADC_2020tweets_organic, is.na(ADC_2020tweets_organic$reply_to_status_id)) 
+ADC_2020text_tweets <- ADC_2020tweets_organic %>%
+  select(text) %>%
+  unnest_tokens(word, text)
+
+#cleaning organic tweets of any characters we don't want to show in the analysis, like @ or links
+ADC_2020text_tweets$word <-  gsub("https\\S*", "", ADC_2020text_tweets$word)
+ADC_2020text_tweets$word <-  gsub("@\\S*", "", ADC_2020text_tweets$word) 
+ADC_2020text_tweets$word  <-  gsub("amp", "", ADC_2020text_tweets$word) 
+
+#removing stop words from the text
+ADC_2020text_tweets<-as.data.frame(ADC_2020text_tweets,na.rm=TRUE)
+ADC_2020text_tweets$word<-as.character(ADC_2020text_tweets$word)
+
+ADC_allothers<-subset(ADC, created_at < as.Date("2020-03-01"))
+#Remove retweets
+ADC_2019tweets_organic <- ADC_2019[ADC_2019$is_retweet==FALSE, ] 
+# Remove replies
+ADC_2019tweets_organic <- subset(ADC_2019tweets_organic, is.na(ADC_2019tweets_organic$reply_to_status_id)) 
+ADC_2019text_tweets <- ADC_2019tweets_organic %>%
+  select(text) %>%
+  unnest_tokens(word, text)
+
+#cleaning organic tweets of any characters we don't want to show in the analysis, like @ or links
+ADC_2019text_tweets$word <-  gsub("https\\S*", "", ADC_2019text_tweets$word)
+ADC_2019text_tweets$word <-  gsub("@\\S*", "", ADC_2019text_tweets$word) 
+ADC_2019text_tweets$word  <-  gsub("amp", "", ADC_2019text_tweets$word) 
+
+#removing stop words from the text
+ADC_2019text_tweets<-as.data.frame(ADC_2019text_tweets,na.rm=TRUE)
+ADC_2019text_tweets$word<-as.character(ADC_2019text_tweets$word)
 ```
 
 #### Top 10: Most Liked Tweets
@@ -316,11 +353,14 @@ wordcloud(ADC_retweets$retweet_screen_name, min.freq=3, scale=c(4, .75), random.
 
 ```
 
-### Understanding what accounts we frequently retweet
+### Understanding sentiment of tweets
 ```{r sentiment-tracker, echo=FALSE, warning=FALSE}
 
+#all tweets
 # Converting tweets to ASCII to trackle strange characters
 ADC_text_tweets <- iconv(ADC_text_tweets, from="UTF-8", to="ASCII", sub="")
+
+ADC_2019text_tweets <- iconv(ADC_2019text_tweets, from="UTF-8", to="ASCII", sub="")
 
 #ADC_text_tweets_cleaned<-as.vector(ADC_text_tweets_cleaned["ADC_text_tweets_cleaned"],mode = "character")
 
@@ -332,12 +372,45 @@ names(ADC_sentimentscores) <- "Score"
 ADC_sentimentscores <- cbind("sentiment"=rownames(ADC_sentimentscores),ADC_sentimentscores)
 rownames(ADC_sentimentscores) <- NULL
 
+#2020 only
+ADC_2020text_tweets <- iconv(ADC_2020text_tweets, from="UTF-8", to="ASCII", sub="")
+ADC_2020sentiment<-get_nrc_sentiment((ADC_2020text_tweets),language="english")
+ADC_2020sentimentscores<-data.frame(colSums(ADC_2020sentiment[,]))
+names(ADC_2020sentimentscores) <- "Score"
+ADC_2020sentimentscores <- cbind("sentiment"=rownames(ADC_2020sentimentscores),ADC_2020sentimentscores)
+rownames(ADC_2020sentimentscores) <- NULL
+sapply(strsplit(ADC_2020text_tweets, " "), length)
+
+#2019 and before
+ADC_2019text_tweets <- iconv(ADC_2019text_tweets, from="UTF-8", to="ASCII", sub="")
+ADC_2019sentiment<-get_nrc_sentiment((ADC_2019text_tweets),language="english")
+ADC_2019sentimentscores<-data.frame(colSums(ADC_2019sentiment[,]))
+names(ADC_2019sentimentscores) <- "Score"
+ADC_2019sentimentscores <- cbind("sentiment"=rownames(ADC_2019sentimentscores),ADC_2019sentimentscores)
+rownames(ADC_2019sentimentscores) <- NULL
+sapply(strsplit(ADC_2019text_tweets, " "), length)
+
+#making full data frame
+stackedsentiment<-data.frame(year=rep(c("2020","2019 and before"), each=10),
+                             sentiment=rep(ADC_2019sentimentscores$sentiment,2),
+                             score=c(ADC_2020sentimentscores$Score, ADC_2019sentimentscores$Score))
+
+#all sentiments
 sentiment_graph<-ggplot(data=ADC_sentimentscores,aes(x=sentiment,y=Score))+
-  geom_bar(aes(fill=sentiment),stat = "identity",)+
+  geom_bar(aes(fill=sentiment),stat = "identity",color="black",position=position_dodge())+
   xlab("Sentiments")+ylab("Scores")+
   ggtitle("Total sentiment based on scores")+
   scale_fill_manual(values=c("#1D244E","#B3E1E7","dark grey","#19B369","#79FD81","#767171","#146660","#000000","light grey","#1B887E"))
 
 sentiment_graph+theme_ADC()+theme(legend.position="none")
+
+# sentiments by year
+sentimentyear_graph<-ggplot(data=stackedsentiment,aes(x=sentiment,y=score,fill=year))+
+  geom_bar(stat = "identity",color="black",position=position_dodge())+
+  xlab("Sentiments")+ylab("Scores")+
+  ggtitle("Total sentiment based on scores by year")+
+  scale_fill_manual(values=c("#1D244E","#B3E1E7"))
+
+sentimentyear_graph+theme_ADC()#+theme(legend.position="none")
 
 ```
