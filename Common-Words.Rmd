@@ -28,7 +28,7 @@ library(tokenizers)
 ## Data Analysis - Tweet Level Info
 
 ```{r twitter-data, echo=FALSE}
-ADC <- get_timeline("@ArcticDataCtr", n= 3200)
+ADC <- get_timeline("@realdonaldtrump", n= 3200)
 
 #Creating an organic tweet list
 #Remove retweets
@@ -82,20 +82,37 @@ head(ADC_text_tweets_cleaned)
 
 ADC_text_tweets_cleaned <- ADC_text_tweets_cleaned %>% arrange(-Freq)
 kable(ADC_text_tweets_cleaned)
+```
 
 
+### Understanding the sentiment of tweet content
+No one likes a Twitter account that only spreads angry or sad tweets. Capturing the tone of your tweets and how they balance out is a good indication of your account’s performance.
 
-#%>% 
-  # %>% 
-  #mutate(word=reorder(word,n)) %>% 
-  #ggplot(aes(x=word,y=n))+
-  #geom_col()+
-  #xlab(NULL)+
-  #coord_flip()+
-  #labs(y="Count",
-     # x="Unique Words",
-      #title="Most frequest words in the Arctic Data Center's tweets",
-     # subtitle="Stop words removed from list")
+```{r sentiment-tracker, echo=FALSE, warning=FALSE}
+
+#all tweets
+# Converting tweets to ASCII to trackle strange characters
+ADC_text_tweets <- iconv(ADC_text_tweets, from="UTF-8", to="ASCII", sub="")
+
+#ADC_text_tweets_cleaned<-as.vector(ADC_text_tweets_cleaned["ADC_text_tweets_cleaned"],mode = "character")
+
+ADC_sentiment<-get_nrc_sentiment((ADC_text_tweets),language="english")
+ADC_sentimentscores<-data.frame(colSums(ADC_sentiment[,]))
+
+names(ADC_sentimentscores) <- "Score"
+
+ADC_sentimentscores <- cbind("sentiment"=rownames(ADC_sentimentscores),ADC_sentimentscores)
+rownames(ADC_sentimentscores) <- NULL
+
+#all sentiments
+sentiment_graph<-ggplot(data=ADC_sentimentscores,aes(x=sentiment,y=Score))+
+  geom_bar(aes(fill=sentiment),stat = "identity",color="black",position=position_dodge())+
+  xlab("Sentiments")+ylab("Scores")+
+  ggtitle("Total sentiment based on scores @RealDonaldTrump")+
+  scale_fill_manual(values=c("#1D244E","#B3E1E7","dark grey","#19B369","#79FD81","#767171","#146660","#000000","light grey","#1B887E"))
+
+sentiment_graph+theme_ADC()+theme(legend.position="none")
+```
 ```
 
 
