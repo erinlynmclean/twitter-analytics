@@ -321,6 +321,10 @@ wordcloud(ADC_retweets$retweet_screen_name, min.freq=3, scale=c(4, .75), random.
 
 ### Understanding the sentiment of tweet content
 No one likes a Twitter account that only spreads angry or sad tweets. Capturing the tone of your tweets and how they balance out is a good indication of your account’s performance.
+
+There are short comings as well like conflation deficiency that is the inability to discriminate among different meanings of a word. For example, the word “bat” has at least two distinct meanings: a flying animal, and a piece of sporting equipment. Another challenge is a text may contain multiple sentiments all at once.
+
+Positive and negative are summary values: the positive bar encompasses anticipation, joy, surprise, and trust; the negative bar encompasses anger, disgust, fear, and sadness.
 ```{r sentiment-tracker, echo=FALSE, warning=FALSE}
 
 # Converting tweets to ASCII to trackle strange characters
@@ -336,12 +340,26 @@ names(ADC_sentimentscores) <- "Score"
 ADC_sentimentscores <- cbind("sentiment"=rownames(ADC_sentimentscores),ADC_sentimentscores)
 rownames(ADC_sentimentscores) <- NULL
 
-sentiment_graph<-ggplot(data=ADC_sentimentscores,aes(x=sentiment,y=Score))+
+sentiment_graph<-ggplot(data=ADC_sentimentscores[1:8,],aes(x=sentiment,y=Score))+
   geom_bar(aes(fill=sentiment),colour="#2C5191", stat = "identity",)+
   xlab("Sentiments")+ylab("Scores")+
   ggtitle("Total sentiment based on scores")+
-  scale_fill_manual(values=c("#FFFFFF","#2C5191","#292929","#4CA9E1","#FCAF2D","#717171","#FED967","#427BD7","#F4BE4F","#B7B7B7"))
+  scale_fill_manual(values=c("#2C5191","#292929","#4CA9E1","#FCAF2D","#FED967","#427BD7","#F4BE4F","#B7B7B7"))
 
-sentiment_graph+theme_ADC()+theme(legend.position="none")
+aggregated_sentiment_graph<-ggplot(data=ADC_sentimentscores[9:10,],aes(x=sentiment,y=Score))+
+  geom_bar(aes(fill=sentiment),colour="#2C5191", stat = "identity",)+
+  xlab("Sentiments")+ylab("Scores")+
+  ggtitle("Total sentiment based on scores")+
+  scale_fill_manual(values=c("#2C5191","#4CA9E1"))
 
+sentiment_graph<-sentiment_graph+theme_ADC()+theme(legend.position="none")
+aggregated_sentiment_graph<-aggregated_sentiment_graph+theme_ADC()+theme(legend.position="none")
+
+```
+
+```{r 2-graphs, echo=FALSE}
+plot_grid(sentiment_graph,aggregated_sentiment_graph,
+          ncol=2, 
+          #nrow=2,
+          rel_widths = c(5,5))
 ```
