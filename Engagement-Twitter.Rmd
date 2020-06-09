@@ -1,0 +1,344 @@
+---
+title: "Twitter Analytics - Arctic Data Centert"
+date: "Last updated June 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Arctic Data Center Twitter Metrics
+
+This report contains information about the Arctic Data Center's Twitter account, @ArcticDataCtr, and how effective it is at engaging a wider audience of Arctic researchers, students, and other data organizations.
+
+### Data Collection - Summary
+
+Data was collected manually on the first of the month from https://analytics.twitter.com/user/arcticdatactr/home. In addition to parameters not necessary to this analysis, this summary file contains:
+
+* month: month of Tweet information
+* year: year of Tweet information
+* tweets: number of Tweets that month
+* profile-visits: number of times users visited the @ArcticDataCtr profile page
+* new-followers: number of new followers gained (gross new followers; does not account for followers lost)
+* tweet-impressions: number of times users are served @ArcticDataCtr tweets in timeline, search results, or from the profile
+* mentions: number of times @ArcticDataCtr was mentioned in tweets
+* number-followers: number of followers, manually copied from https://twitter.com/arcticdatactr. 
+    * Number of followers is the only piece of data in this file that is only available from Twitter at the time you access the site i.e. it is not made available with the rest of the data in this dataset. Thus, there are NAs for dates prior to the time I started to collect this data or for dates before I realized this data was ephemeral.
+
+### Data Collection - Monthly Tweets
+
+Data was scraped using the R package rtweet. In addition to parameters not necessary to this analysis, this data contains the following parameters:
+
+* status_id: the identifier for the Tweet, which can be used to find the permanent URL
+* created_at: the time the Tweet was sent (GMT)
+* text: the text (content) of the Tweet
+* display_text_width: how many characters are in the Tweet
+* reply_to_status_id: whether the Tweet was a reply
+* reply_to_screen_name: who the Tweet was a reply to
+* is_retweet: whether the Tweet was a retweet
+* favorite_count: number of likes
+* retweet_count: number of retweets
+* hashtags: what hashtags were used in the Tweet content
+* media_type: what type of media was attached to the Tweet
+* mentions_screen_name: what other Twitter accounts were mentioned (@) in the Tweet
+
+Additionally, Tweet-level data was also downloaded from https://analytics.twitter.com/user/arcticdatactr/home, and in addition to parameters not necessary to this analysis, this data contains the following additional parameters:
+
+* Tweet id: the identifier for the Tweet, which can be used to find the permanent URL
+* impressions: number of times users are served the tweet in timeline, search results, or from the @ArcticDataCtr profile
+* engagements: total number of times a user interacted with a Tweet. Clicks anywhere on the Tweet, including Retweets, replies, follows, likes, links, cards, hashtags, embedded media, username, profile photo, or Tweet expansion
+* engagement rate: number of engagements divided by impressions
+* replies: number of replies that Tweet generated
+* user profile clicks: number of times a user clicked on the @ArcticDataCtr profile from that particular tweet
+* URL clicks: number of times that URL within the tweet was clicked
+* hashtag clicks: number of times any of your hashtags were clicked from that tweet
+* detail expands: number of times users clicked 'see more' on your tweet
+* permalink clicks: clicks on the Tweet permalink
+* follows: times a user followed you directly from the Tweet
+* media views: number of times media attached to the Tweet is viewed
+* media engagements: an interaction on a tweet that has a piece of media (photo, vine, other video, etc) in it
+
+Data scraped from rtweet and downloaded from the Twitter metrics page were joined based on the Tweet id / status_id variable.
+
+```{r load-packages, echo=FALSE,results=FALSE,message=FALSE}
+library(readr)
+library(tidyr)
+library(knitr)
+library(ggplot2)
+library(syuzhet)
+library(rtweet)
+library(dplyr)
+library(tidytext)
+library(kableExtra)
+library(ggraph)
+library(formattable)
+library(data.table)
+library(dendroTools)
+library(cowplot)
+library(tm)
+library(tokenizers)
+library(tidyverse)
+library(wordcloud)
+library(SnowballC)
+library(RColorBrewer)
+library(wordcloud2)
+library(widyr)
+library(igraph)
+library(topicmodels)
+library(DataCombine)
+library(ggThemeAssist)
+library(quanteda)
+library(data.table)
+library(lubridate)
+library(textclean)
+```
+
+```{r raw-data, echo=FALSE,results=FALSE,message=FALSE}
+twitter_summary_metrics <- read_csv("~/Documents/Twitter Analytics/Raw Data/twitter-summary-metrics.csv")
+twitter_summary_metrics$Date <-as.Date(twitter_summary_metrics$Date) 
+```
+
+```{r creating-custom-theme-colors, echo=FALSE,results=FALSE,message=FALSE}
+theme_ADC<- function() {
+  theme_bw(base_size=12,base_family="Helvetica") %+replace%
+    theme(
+      plot.title=element_text(size=11, face="bold",margin=margin(10,0,10,0),color="#1D244F"),
+      plot.subtitle = element_text(size=10,margin=margin(0,0,10,0),color="#1D244F"),
+        axis.text.x = element_text(angle=50, size=8, vjust=0.5, color="#1D244F"),
+        axis.text.y = element_text(size=8, color="#1D244F"),
+        axis.title.x = element_text(color="#1D244F",vjust=-.5,size=10),
+        axis.title.y = element_text(color="#1D244F",angle=90,vjust=.5,size=10),
+        panel.background=element_rect(fill="white"),
+        axis.line = element_line(color="#1D244F"),
+      panel.grid.major = element_line(colour = "white", size = 0.2), 
+    panel.grid.minor = element_line(colour = "white", size = 0.5),
+    )
+}
+
+ADC_colors <- c(
+  `navy`="#1D244E",
+  `light blue`="#B3E1E7",
+  `green`="#19B369",
+  `light green`="#79FD81",
+  `teal`="#146660",
+  `dark teal`="#1B887E",
+  `grey`="#767171",
+  `black`="#000000")
+```
+
+## Summary Information
+
+```{r monthly-tweets, echo=FALSE,results=FALSE,message=FALSE}
+monthlytweets<-ggplot(data = twitter_summary_metrics, aes(x=Date, y=Tweets)) +
+  geom_line(color="#156760",size=1.5)+
+  labs(title='Monthly Tweets Over Time',
+       x="Date",
+       y="Tweets")
+
+monthlytweets<-monthlytweets+theme_ADC()
+```
+
+```{r followers, echo=FALSE}
+followers<-ggplot(data = twitter_summary_metrics, aes(x=Date, y=New_Followers)) +
+  geom_line(color="#156760",size=1.5)+
+  labs(title='Monthly Followers Over Time',
+       x="Date",
+       y="Followers")
+
+followers<-followers+theme_ADC()
+
+```
+
+```{r impressions, echo=FALSE}
+impressions<-ggplot(data = twitter_summary_metrics, aes(x=Date, y=Tweet_Impressions)) +
+  geom_point(color="#156760",size=2.5)+
+    labs(title='Monthly Impressions Over Time',
+       x="Date",
+       y="Impressions")
+
+impressions<-impressions+theme_ADC()
+```
+
+```{r tweet-impressions, echo=FALSE}
+tweetimpressions<-ggplot(data = twitter_summary_metrics, aes(x=Tweets, y=Tweet_Impressions)) +
+  geom_point(color="#156760",size=2.5)+
+  labs(title='Impact of Tweets on Impressions',
+       x="Tweets",
+       y="Impressions")+
+  stat_smooth(method="lm", se=FALSE, color="#B4E6EA",size=1)
+
+tweetimpressions<-tweetimpressions+theme_ADC()
+```
+
+```{r 4-graphs, echo=FALSE}
+plot_grid(monthlytweets,followers,impressions,tweetimpressions,
+          ncol=2, nrow=2,
+          rel_widths = c(2,2,2,2))
+```
+
+```{r twitter-data, echo=FALSE}
+ADC_raw <- get_timeline("@ArcticDataCtr", n= 3200)
+ADC_raw$status_id <-as.numeric(ADC_raw$status_id)
+ADC_raw <- select(ADC_raw, status_id, created_at, text, display_text_width, reply_to_status_id, reply_to_screen_name,
+                  is_retweet, favorite_count, retweet_count, hashtags, media_type, mentions_screen_name)
+
+#If you want to export the tweet timeline as a .csv, run the following commented lines of code.
+#ADC <- apply(ADC,2,as.character)
+#write.csv(ADC,"/Users/mclean/Downloads/ADC-Tweet-Data.csv", row.names = FALSE)
+
+#Joining rtweet data to downloaded twitter data
+
+files <- list.files("~/Documents/Twitter Analytics/Raw Data/Monthly/",pattern="twitter-metrics-",full.names=TRUE)
+ADC_downloaded <- lapply(files, read.csv, stringsAsFactors = F)
+ADC_downloaded_merge <- do.call(rbind, ADC_downloaded) %>% 
+  select(Tweet.id, impressions, engagements, engagement.rate, replies, user.profile.clicks, url.clicks,
+         hashtag.clicks, detail.expands, permalink.clicks, media.views, media.engagements)
+
+ADC <- left_join(ADC_raw, ADC_downloaded_merge, by = c("status_id" = "Tweet.id"))
+```
+
+```{r twitter-clean, echo=FALSE}
+ADC$text <-replace_html(ADC$text,symbol=TRUE)
+#creating two columns Date AND Time rather than "created at"
+ADC$posdate <- as.POSIXct(ADC$created_at,format="%Y:%m:%d %H:%M:%S")
+ADC$posdate <- with_tz(ADC$posdate, tzone = "America/Los_Angeles")
+ADC$Time <- format(as.POSIXct(ADC$posdate,format="%Y:%m:%d %H:%M:%S"),"%H:%M:%S")
+ADC$Date <- format(as.POSIXct(ADC$posdate,format="%Y:%m:%d %H:%M:%S"),"%Y:%m:%d")
+ADC$Hour<-format(strptime(ADC$Time,"%H:%M:%S"),'%H')
+
+#Creating an organic tweet list
+#Remove retweets
+ADC_tweets_organic <- ADC[ADC$is_retweet==FALSE, ] 
+# Remove replies
+ADC_tweets_organic <- subset(ADC_tweets_organic, is.na(ADC_tweets_organic$reply_to_status_id)) 
+ADC_tweets_organic$created_at <-as.character.Date(ADC_tweets_organic$created_at) 
+ADC_tweets_organic$hashtags <- lapply(ADC_tweets_organic$hashtags, paste0, collapse = ", ")
+
+#Keeping ONLY the retweets
+ADC_retweets <- ADC[ADC$is_retweet==TRUE, ] 
+
+#Keeping ONLY the replies
+ADC_replies <- subset(ADC, !is.na(ADC$reply_to_status_id))
+
+
+
+
+```
+
+#### Top 5: Most Liked Tweets
+```{r twitter-faves, echo=FALSE}
+
+ADC_tweets_organic <- ADC_tweets_organic %>% arrange(-favorite_count)
+ADC_tweets_fav <- select(ADC_tweets_organic,text,created_at,favorite_count, hashtags)
+ADC_tweets_fav <- ADC_tweets_fav[1:5,]
+
+ADC_tweets_fav %>% 
+  kable(col.names=c("Tweet","Date and Time","Likes", "Hashtags Used")) %>% 
+  kable_styling() %>% 
+  column_spec(2,width="10em") %>% 
+  column_spec(1,width="35em")
+```
+
+#### Top 5: Most Retweeted Tweets
+```{r twitter-retweets, echo=FALSE}
+
+ADC_tweets_organic <- ADC_tweets_organic %>% arrange(-retweet_count)
+ADC_tweets_retweets <- select(ADC_tweets_organic,text,created_at, retweet_count,hashtags)
+ADC_tweets_retweets <- ADC_tweets_retweets[1:5,]
+
+ADC_tweets_retweets %>% 
+  kable(col.names=c("Tweet","Date and Time","Retweets", "Hashtags Used")) %>% 
+  kable_styling() %>% 
+  column_spec(2,width="10em") %>% 
+  column_spec(1,width="35em") 
+
+```
+
+#### Top 5: Most Engaging Tweets
+The number of engagements a Tweet gets is the total number of times a user interacted with a Tweet. An interaction is defined as the user clicking anywhere on the Tweet, including Retweets, replies, follows, likes, links, cards, hashtags, embedded media, username, profile photo, or Tweet expansion.
+```{r twitter-engagements, echo=FALSE}
+
+ADC_tweets_organic <- ADC_tweets_organic %>% arrange(-engagements)
+ADC_tweets_engagements <- select(ADC_tweets_organic,text,created_at, engagements,hashtags)
+ADC_tweets_engagements <- ADC_tweets_engagements[1:5,]
+
+ADC_tweets_engagements %>% 
+  kable(col.names=c("Tweet","Date and Time","Engagements", "Hashtags Used")) %>% 
+  kable_styling() %>% 
+  column_spec(2,width="10em") %>% 
+  column_spec(1,width="35em")
+
+```
+
+#### Top 5: Most Impressionistic Tweets
+The number of impressions that a Tweet generates is the number of times users are served @ArcticDataCtr tweets in their timeline, search results, or from @ArcticDataCtr's profile.
+```{r twitter-impressions, echo=FALSE}
+
+ADC_tweets_organic <- ADC_tweets_organic %>% arrange(-impressions)
+ADC_tweets_impressions <- select(ADC_tweets_organic,text,created_at, impressions,hashtags)
+ADC_tweets_impressions <- ADC_tweets_impressions[1:5,]
+
+ADC_tweets_impressions %>% 
+  kable(col.names=c("Tweet","Date and Time","Impressions", "Hashtags Used")) %>% 
+  kable_styling() %>% 
+  column_spec(2,width="10em") %>% 
+  column_spec(1,width="35em")
+
+```
+
+#### Distribution of replies, retweets, and organic tweets
+Analyzing the ratio of replies, retweets and organic tweets can tell you a great deal about the type of account you’re analysing. No one likes a Twitter account that exclusively retweets for instance, without any individual content. Finding a good ratio of replies, retweets and organic tweets is therefore a key metric to monitor if one wishes to improve the performance of an account.
+```{r twitter-ratio, echo=FALSE}
+
+tweet_ratio <- data.frame(
+  category=c("Retweets", "Replies", "Organic Tweets"),
+  count=c(nrow(ADC_retweets), nrow(ADC_replies), nrow(ADC_tweets_organic))
+)
+
+# Adding calculated data columns
+tweet_ratio$fraction = tweet_ratio$count / sum(tweet_ratio$count)
+tweet_ratio$percentage = tweet_ratio$count / sum(tweet_ratio$count) * 100
+tweet_ratio$ymax = cumsum(tweet_ratio$fraction)
+tweet_ratio$ymin = c(0, head(tweet_ratio$ymax, n=-1))
+
+#Rounding to two decimal points
+tweet_ratio<-round_df(tweet_ratio,2)
+
+#Creating the legend
+TweetType<-paste(tweet_ratio$category, tweet_ratio$percentage, "%")
+
+#Plotting the data
+ggplot(tweet_ratio,aes(ymax=ymax, ymin=ymin, xmax=4,xmin=3,fill=TweetType))+
+  geom_rect()+
+  coord_polar(theta="y")+
+  xlim(c(2,4))+
+  theme_void()+
+  theme(legend.position = "right")+ 
+  scale_fill_manual(values=c( "#79FDB1","#B4E6EA","#1D244E"))
+```
+
+### When is the best time of day to post tweets?
+
+```{r time-of-day, echo=FALSE,results=FALSE,warning=FALSE, message=FALSE}
+tweettime_engagements<-ggplot(data = ADC_tweets_organic, aes(x=Hour, y=engagements)) +
+  geom_col(fill="#156760", color="#79FDB1")+
+  labs(title='Time of Tweet vs Engagements',
+       x="Time",
+       y="Number of Engagements")
+
+tweettime_engagements<-tweettime_engagements+theme_ADC()
+
+tweettime_impressions<-ggplot(data = ADC_tweets_organic, aes(x=Hour, y=impressions)) +
+  geom_col(fill="#79FDB1", color="#156760")+
+  labs(title='Time of Tweet vs Impressions',
+       x="Time",
+       y="Number of Impressions")
+
+tweettime_impressions<-tweettime_impressions+theme_ADC()
+
+plot_grid(tweettime_engagements,tweettime_impressions,
+          nrow=2,
+          rel_widths = c(1.5,1.5))
+
+```
