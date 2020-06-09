@@ -1,5 +1,5 @@
 ---
-title: "Twitter Analytics - Arctic Data Centert"
+title: "Twitter Analytics - Arctic Data Center"
 date: "Last updated June 2020"
 output: html_document
 ---
@@ -45,19 +45,19 @@ Data was scraped using the R package rtweet. In addition to parameters not neces
 
 Additionally, Tweet-level data was also downloaded from https://analytics.twitter.com/user/arcticdatactr/home, and in addition to parameters not necessary to this analysis, this data contains the following additional parameters:
 
-* Tweet id: the identifier for the Tweet, which can be used to find the permanent URL
+* Tweet.id: the identifier for the Tweet, which can be used to find the permanent URL
 * impressions: number of times users are served the tweet in timeline, search results, or from the @ArcticDataCtr profile
 * engagements: total number of times a user interacted with a Tweet. Clicks anywhere on the Tweet, including Retweets, replies, follows, likes, links, cards, hashtags, embedded media, username, profile photo, or Tweet expansion
-* engagement rate: number of engagements divided by impressions
+* engagement.rate: number of engagements divided by impressions
 * replies: number of replies that Tweet generated
-* user profile clicks: number of times a user clicked on the @ArcticDataCtr profile from that particular tweet
-* URL clicks: number of times that URL within the tweet was clicked
-* hashtag clicks: number of times any of your hashtags were clicked from that tweet
-* detail expands: number of times users clicked 'see more' on your tweet
-* permalink clicks: clicks on the Tweet permalink
+* user.profile.clicks: number of times a user clicked on the @ArcticDataCtr profile from that particular tweet
+* URL.clicks: number of times that URL within the tweet was clicked
+* hashtag.clicks: number of times any of your hashtags were clicked from that tweet
+* detail.expands: number of times users clicked 'see more' on your tweet
+* permalink.clicks: clicks on the Tweet permalink
 * follows: times a user followed you directly from the Tweet
-* media views: number of times media attached to the Tweet is viewed
-* media engagements: an interaction on a tweet that has a piece of media (photo, vine, other video, etc) in it
+* media.views: number of times media attached to the Tweet is viewed
+* media.engagements: an interaction on a tweet that has a piece of media (photo, vine, other video, etc) in it
 
 Data scraped from rtweet and downloaded from the Twitter metrics page were joined based on the Tweet id / status_id variable.
 
@@ -207,6 +207,7 @@ ADC$Time <- format(as.POSIXct(ADC$posdate,format="%Y:%m:%d %H:%M:%S"),"%H:%M:%S"
 ADC$Date <- format(as.POSIXct(ADC$posdate,format="%Y:%m:%d %H:%M:%S"),"%Y:%m:%d")
 ADC$Hour<-format(strptime(ADC$Time,"%H:%M:%S"),'%H')
 
+
 #Creating an organic tweet list
 #Remove retweets
 ADC_tweets_organic <- ADC[ADC$is_retweet==FALSE, ] 
@@ -220,9 +221,6 @@ ADC_retweets <- ADC[ADC$is_retweet==TRUE, ]
 
 #Keeping ONLY the replies
 ADC_replies <- subset(ADC, !is.na(ADC$reply_to_status_id))
-
-
-
 
 ```
 
@@ -319,8 +317,36 @@ ggplot(tweet_ratio,aes(ymax=ymax, ymin=ymin, xmax=4,xmin=3,fill=TweetType))+
 ```
 
 ### When is the best time of day to post tweets?
-
+Only organic tweets are included in this analysis because engagements and impressions are not calculated the same way for retweets.
 ```{r time-of-day, echo=FALSE,results=FALSE,warning=FALSE, message=FALSE}
+#trying to normalize data by number of tweets
+count_tweets<-ADC_tweets_organic %>%  
+  group_by(Hour) %>%
+  summarize(n = n())
+
+count_engagements<-ADC_tweets_organic %>%  
+  group_by(Hour) %>%
+  summarize(engagement_sum = sum(engagements,na.rm=TRUE))
+
+count_impressions<-ADC_tweets_organic %>%  
+  group_by(Hour) %>%
+  summarize(impressions_sum = sum(impressions,na.rm=TRUE))
+
+byhour<-cbind(count_tweets,count_engagements$engagement_sum,count_impressions$impressions_sum)
+names(byhour)[3] <- "eng_sum"
+names(byhour)[4] <- "imp_sum"
+
+byhour$normalengagement<-(byhour$eng_sum/byhour$n)
+byhour$normalimpressions<-(byhour$imp_sum/byhour$n)
+
+normal_engagements<-ggplot(data= byhour, aes(x=Hour, y=normalengagement)) +
+  geom_col(fill="#156760", color="#79FDB1")+
+  labs(title='Time of Tweet vs Engagements (Normalized)',
+       x="Time",
+       y="Normalized Engagements")
+
+normal_engagements<-normal_engagements+theme_ADC()
+
 tweettime_engagements<-ggplot(data = ADC_tweets_organic, aes(x=Hour, y=engagements)) +
   geom_col(fill="#156760", color="#79FDB1")+
   labs(title='Time of Tweet vs Engagements',
@@ -328,6 +354,14 @@ tweettime_engagements<-ggplot(data = ADC_tweets_organic, aes(x=Hour, y=engagemen
        y="Number of Engagements")
 
 tweettime_engagements<-tweettime_engagements+theme_ADC()
+
+normal_impressions<-ggplot(data= byhour, aes(x=Hour, y=normalimpressions)) +
+  geom_col(fill="#79FDB1", color="#156760")+
+  labs(title='Time of Tweet vs Impressions (Normalized)',
+       x="Time",
+       y="Normalized Impressions")
+
+normal_impressions<-normal_impressions+theme_ADC()
 
 tweettime_impressions<-ggplot(data = ADC_tweets_organic, aes(x=Hour, y=impressions)) +
   geom_col(fill="#79FDB1", color="#156760")+
@@ -337,8 +371,8 @@ tweettime_impressions<-ggplot(data = ADC_tweets_organic, aes(x=Hour, y=impressio
 
 tweettime_impressions<-tweettime_impressions+theme_ADC()
 
-plot_grid(tweettime_engagements,tweettime_impressions,
-          nrow=2,
-          rel_widths = c(1.5,1.5))
+plot_grid(tweettime_engagements,normal_engagements, tweettime_impressions, normal_impressions,
+          ncol=2,nrow=2,
+          rel_widths = c(1.5,1.5,1.5,1.5))
 
 ```
