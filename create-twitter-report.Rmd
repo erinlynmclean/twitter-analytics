@@ -169,6 +169,8 @@ plot_grid(monthlytweets,followers,impressions,tweetimpressions,
 
 ```{r twitter-data, echo=FALSE}
 ADC <- get_timeline("@ArcticDataCtr", n= 3200)
+
+#write.csv(ADC,"/Users/mclean/Downloads/ADC-Tweet-Data.csv", row.names = FALSE)
 ```
 
 ```{r twitter-clean, echo=FALSE}
@@ -399,45 +401,6 @@ sentiment_graph<-sentiment_graph+theme_ADC()+theme(legend.position="none")
 aggregated_sentiment_graph<-aggregated_sentiment_graph+theme_ADC()+theme(legend.position="none") 
 ```
 
-```{r year-sentiment-tracker, echo=FALSE, warning=FALSE,eval=FALSE}
-
-#2020 only
-ADC_2020text_tweets <- iconv(ADC_2020text_tweets, from="UTF-8", to="ASCII", sub="")
-ADC_2020sentiment<-get_nrc_sentiment((ADC_2020text_tweets),language="english")
-ADC_2020sentimentscores<-data.frame(colSums(ADC_2020sentiment[,]))
-names(ADC_2020sentimentscores) <- "Score"
-ADC_2020sentimentscores <- cbind("sentiment"=rownames(ADC_2020sentimentscores),ADC_2020sentimentscores)
-rownames(ADC_2020sentimentscores) <- NULL
-
-sapply(strsplit(ADC_2020text_tweets, " "), length)
-
-#2019 and before
-ADC_2019text_tweets <- iconv(ADC_2019text_tweets, from="UTF-8", to="ASCII", sub="")
-ADC_2019sentiment<-get_nrc_sentiment((ADC_2019text_tweets),language="english")
-ADC_2019sentimentscores<-data.frame(colSums(ADC_2019sentiment[,]))
-names(ADC_2019sentimentscores) <- "Score"
-ADC_2019sentimentscores <- cbind("sentiment"=rownames(ADC_2019sentimentscores),ADC_2019sentimentscores)
-rownames(ADC_2019sentimentscores) <- NULL
-
-#letting you know how many words are in the string
-sapply(strsplit(ADC_2019text_tweets, " "), length)
-
-#making full data frame
-stackedsentiment<-data.frame(year=rep(c("2020","2019 and before"), each=10),
-                             sentiment=rep(ADC_2019sentimentscores$sentiment,2),
-                             score=c(ADC_2020sentimentscores$Score, ADC_2019sentimentscores$Score))
-
-# sentiments by year
-sentimentyear_graph<-ggplot(data=stackedsentiment,aes(x=sentiment,y=score,fill=year))+
-  geom_bar(stat = "identity",color="black",position=position_dodge())+
-  xlab("Sentiments")+ylab("Scores")+
-  ggtitle("Total sentiment based on scores by year")+
-  scale_fill_manual(values=c("#1D244E","#B3E1E7"))
-
-sentimentyear_graph+theme_ADC()#+theme(legend.position="none")
-
-```
-
 ```{r 2-graphs, echo=FALSE}
 plot_grid(sentiment_graph,aggregated_sentiment_graph,
           ncol=2, 
@@ -445,14 +408,3 @@ plot_grid(sentiment_graph,aggregated_sentiment_graph,
           rel_widths = c(5,5))
 ```
 
-```{r time-graph, echo=FALSE}
-
-
-#The get_nrc_sentiment function returns a data frame in which each row represents a sentence from the original file. It's treating all the words from our tweets like one sentence because that's how the character vector is stored. 
-
-# Next time you work on this, see if you can figure out a way to mine the tweets as sentences rather than as one string of words.
-
-angry_items <- which(ADC_sentiment$anger > 0)
-ADC_sentiment[angry_items]
-
-```
