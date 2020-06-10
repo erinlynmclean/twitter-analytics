@@ -170,25 +170,25 @@ ADC_colors <- c(
   `black`="#000000")
 ```
 
-### How has the Arcitc Data Center's Twitter account increased its reach over time?
-These first two graphs illustrate the number of organic Tweets each month (that is, not Retweets or replies) and the number of followers @ArcticDataCtr has gained each month. The number of followers gained does not include any followers lost, and represents the net gain (or loss) of followers.
+### How has the Arctic Data Center's Twitter account increased its reach over time?
+These first two graphs illustrate the number of organic Tweets each month (that is, not Retweets or replies, though Retweets with a comment added ARE included) and the number of followers @ArcticDataCtr has gained each month. The number of followers gained does not include any followers lost, and represents the net gain (or loss) of followers.
 ```{r monthly-tweets, echo=FALSE,results=FALSE,message=FALSE}
 monthlytweets<-ggplot(data = bymonth, aes(x=date, y=n)) +
-  geom_line(color="#156760",size=1.5)+
+  geom_point(color="#1B887E",size=2.5)+
   labs(title='Number of Monthly Tweets',
        x="Date",
        y="Number of Tweets")+
-    stat_smooth(method="lm", se=FALSE, color="#B4E6EA",size=1)
+    stat_smooth(method="lm", se=FALSE, color="#B3E1E7",size=1)
 
 monthlytweets<-monthlytweets+theme_ADC()
 ```
 ```{r followers, echo=FALSE}
 followers<-ggplot(data = twitter_summary_metrics, aes(x=Date, y=New_Followers)) +
-  geom_line(color="#156760",size=1.5)+
+  geom_point(color="#1B887E",size=2.5)+
   labs(title='Followers Gained Each Month',
        x="Date",
        y="Followers Gained")+
-    stat_smooth(method="lm", se=FALSE, color="#B4E6EA",size=1)
+    stat_smooth(method="lm", se=FALSE, color="#B3E1E7",size=1)
 
 followers<-followers+theme_ADC()
 
@@ -202,22 +202,22 @@ These next two graphs dig into the metrics associated with each Tweet. Every org
 ```{r normal-impressions-engagements, echo=FALSE}
 
 tweetengagements<-ggplot(data = bymonth, aes(x=date, y=normalengagement)) +
-  geom_point(color="#156760",size=2.5)+
+  geom_point(color="#1D244E",size=2.5)+
   labs(title='Engagements per Tweet',
        subtitle = '',
        x="Time",
        y="Engagements per Tweet")+
-  stat_smooth(method="lm", se=FALSE, color="#B4E6EA",size=1)
+  stat_smooth(method="lm", se=FALSE, color="#19B369",size=1)
 
 tweetengagements<-tweetengagements+theme_ADC()
 
 tweetimpressions<-ggplot(data = bymonth, aes(x=date, y=normalimpressions)) +
-  geom_point(color="#156760",size=2.5)+
+  geom_point(color="#1D244E",size=2.5)+
   labs(title='Impressions per Tweet',
        subtitle = '',
        x="Time",
-       y="Impressions")+
-  stat_smooth(method="lm", se=FALSE, color="#B4E6EA",size=1)
+       y="Impressions per Tweet")+
+  stat_smooth(method="lm", se=FALSE, color="#19B369",size=1)
 
 tweetimpressions<-tweetimpressions+theme_ADC()
 ```
@@ -230,29 +230,54 @@ The number of engagements includes all actions that a user could take with a Twe
 ```{r normal-faves-likes, echo=FALSE}
 
 tweetfaves<-ggplot(data = bymonth, aes(x=date, y=normalfaves)) +
-  geom_point(color="#156760",size=2.5)+
+  geom_point(color="#146660",size=2.5)+
   labs(title='Mean Monthly Favorites per Tweet',
        subtitle = '',
        x="Time",
        y="Favorites per Tweet")+
-  stat_smooth(method="lm", se=FALSE, color="#B4E6EA",size=1)
+  stat_smooth(method="lm", se=FALSE, color="#79FD81",size=1)
 
 tweetfaves<-tweetfaves+theme_ADC()
 
 tweetRTs<-ggplot(data = bymonth, aes(x=date, y=normalRTs)) +
-  geom_point(color="#156760",size=2.5)+
+  geom_point(color="#146660",size=2.5)+
   labs(title='Mean Monthly Retweets per Tweet',
        subtitle = '',
        x="Time",
        y="Retweets")+
-  stat_smooth(method="lm", se=FALSE, color="#B4E6EA",size=1)
+  stat_smooth(method="lm", se=FALSE, color="#79FD81",size=1)
 
 tweetRTs<-tweetRTs+theme_ADC()
 ```
 ```{r more-engagement-graphs, echo=FALSE}
-plot_grid(tweetfaves,tweetRTs,
-          ncol=2)
+plot_grid(tweetfaves,NULL,tweetRTs,
+          nrow=1,rel_widths = c(1,.15,1))
 ```
+
+```{r twitter-faves-tables, echo=FALSE}
+
+ADC_tweets_organic <- ADC_tweets_organic %>% arrange(-favorite_count)
+ADC_tweets_fav <- select(ADC_tweets_organic,text,created_at,favorite_count)
+ADC_tweets_fav <- ADC_tweets_fav[1:5,]
+
+ADC_tweets_organic <- ADC_tweets_organic %>% arrange(-retweet_count)
+ADC_tweets_retweets <- select(ADC_tweets_organic,text,created_at, retweet_count)
+ADC_tweets_retweets <- ADC_tweets_retweets[1:5,]
+
+kable(ADC_tweets_fav,col.names=c("Tweet","Timestamp","Likes")) %>%
+  kable_styling(bootstrap_options = c("striped", "condensed"), full_width = FALSE, position = "float_left",font_size=12) %>%
+  column_spec(1, width = "20em") %>%
+  column_spec(2, width = "7em") %>%
+  column_spec(3, width = "3em")
+
+kable(ADC_tweets_retweets,col.names=c("Tweet","Timestamp","Retweets")) %>%
+  kable_styling(bootstrap_options = c("striped", "condensed"), full_width = FALSE, position = "left",font_size=12) %>%
+  column_spec(1, width = "20em") %>%
+  column_spec(2, width = "7em") %>%
+  column_spec(3, width = "3em")
+```
+
+&nbsp;
 
 ### What content is liked and retweeted most often?
 Understanding what content resonates with our audience of Arctic researchers is an important part of running a successful and engaging Twitter account. The following tables illustrate the Tweets that have been impactful to our audience.
@@ -261,11 +286,11 @@ Understanding what content resonates with our audience of Arctic researchers is 
 ```{r twitter-faves, echo=FALSE}
 
 ADC_tweets_organic <- ADC_tweets_organic %>% arrange(-favorite_count)
-ADC_tweets_fav <- select(ADC_tweets_organic,text,created_at,favorite_count, hashtags)
+ADC_tweets_fav <- select(ADC_tweets_organic,text,created_at,favorite_count)
 ADC_tweets_fav <- ADC_tweets_fav[1:5,]
 
 ADC_tweets_fav %>% 
-  kable(col.names=c("Tweet","Date and Time","Likes", "Hashtags Used")) %>% 
+  kable(col.names=c("Tweet","Date and Time","Likes")) %>% 
   kable_styling() %>% 
   column_spec(2,width="10em") %>% 
   column_spec(1,width="35em")
@@ -275,11 +300,11 @@ ADC_tweets_fav %>%
 ```{r twitter-retweets, echo=FALSE}
 
 ADC_tweets_organic <- ADC_tweets_organic %>% arrange(-retweet_count)
-ADC_tweets_retweets <- select(ADC_tweets_organic,text,created_at, retweet_count,hashtags)
+ADC_tweets_retweets <- select(ADC_tweets_organic,text,created_at, retweet_count)
 ADC_tweets_retweets <- ADC_tweets_retweets[1:5,]
 
 ADC_tweets_retweets %>% 
-  kable(col.names=c("Tweet","Date and Time","Retweets", "Hashtags Used")) %>% 
+  kable(col.names=c("Tweet","Date and Time","Retweets")) %>% 
   kable_styling() %>% 
   column_spec(2,width="10em") %>% 
   column_spec(1,width="35em") 
