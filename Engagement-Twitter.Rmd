@@ -220,12 +220,35 @@ tweetimpressions<-ggplot(data = bymonth, aes(x=date, y=normalimpressions)) +
   stat_smooth(method="lm", se=FALSE, color="#19B369",size=1)
 
 tweetimpressions<-tweetimpressions+theme_ADC()
+
+
 ```
 ```{r more-depth--graphs, echo=FALSE}
-plot_grid(tweetengagements,tweetimpressions,
-          ncol=2)
+plot_grid(tweetengagements,NULL,tweetimpressions,
+          nrow=1,rel_widths = c(1,.15,1))
 ```
+```{r twitter-impressions-tables, echo=FALSE}
 
+ADC_tweets_organic <- ADC_tweets_organic %>% arrange(-engagements)
+ADC_tweets_engagements <- select(ADC_tweets_organic,text,created_at, engagements)
+ADC_tweets_engagements <- ADC_tweets_engagements[1:5,]
+
+ADC_tweets_organic <- ADC_tweets_organic %>% arrange(-impressions)
+ADC_tweets_impressions <- select(ADC_tweets_organic,text,created_at, impressions)
+ADC_tweets_impressions <- ADC_tweets_impressions[1:5,]
+
+kable(ADC_tweets_engagements,col.names=c("Tweet","Timestamp","Engagements")) %>%
+  kable_styling(bootstrap_options = c("striped", "condensed"), full_width = FALSE, position = "float_left",font_size=12) %>%
+  column_spec(1, width = "18em") %>%
+  column_spec(2, width = "6em") %>%
+  column_spec(3, width = "4em")
+
+kable(ADC_tweets_impressions,col.names=c("Tweet","Timestamp","Impressions")) %>%
+  kable_styling(bootstrap_options = c("striped", "condensed"), full_width = FALSE, position = "left",font_size=12) %>%
+  column_spec(1, width = "18em") %>%
+  column_spec(2, width = "6em") %>%
+  column_spec(3, width = "4em")
+```
 The number of engagements includes all actions that a user could take with a Tweet, including Retweeting, clicking anywhere on the Tweet, or favoriting the Tweet. To dig further into those engagements, the following graphs show the number of likes and retweets on a per Tweet basis.
 ```{r normal-faves-likes, echo=FALSE}
 
@@ -253,7 +276,6 @@ tweetRTs<-tweetRTs+theme_ADC()
 plot_grid(tweetfaves,NULL,tweetRTs,
           nrow=1,rel_widths = c(1,.15,1))
 ```
-
 ```{r twitter-faves-tables, echo=FALSE}
 
 ADC_tweets_organic <- ADC_tweets_organic %>% arrange(-favorite_count)
@@ -278,71 +300,6 @@ kable(ADC_tweets_retweets,col.names=c("Tweet","Timestamp","Retweets")) %>%
 ```
 
 &nbsp;
-
-### What content is liked and retweeted most often?
-Understanding what content resonates with our audience of Arctic researchers is an important part of running a successful and engaging Twitter account. The following tables illustrate the Tweets that have been impactful to our audience.
-
-#### Top 5: Most Liked Tweets
-```{r twitter-faves, echo=FALSE}
-
-ADC_tweets_organic <- ADC_tweets_organic %>% arrange(-favorite_count)
-ADC_tweets_fav <- select(ADC_tweets_organic,text,created_at,favorite_count)
-ADC_tweets_fav <- ADC_tweets_fav[1:5,]
-
-ADC_tweets_fav %>% 
-  kable(col.names=c("Tweet","Date and Time","Likes")) %>% 
-  kable_styling() %>% 
-  column_spec(2,width="10em") %>% 
-  column_spec(1,width="35em")
-```
-
-#### Top 5: Most Retweeted Tweets
-```{r twitter-retweets, echo=FALSE}
-
-ADC_tweets_organic <- ADC_tweets_organic %>% arrange(-retweet_count)
-ADC_tweets_retweets <- select(ADC_tweets_organic,text,created_at, retweet_count)
-ADC_tweets_retweets <- ADC_tweets_retweets[1:5,]
-
-ADC_tweets_retweets %>% 
-  kable(col.names=c("Tweet","Date and Time","Retweets")) %>% 
-  kable_styling() %>% 
-  column_spec(2,width="10em") %>% 
-  column_spec(1,width="35em") 
-
-```
-
-#### Top 5: Most Engaging Tweets
-The number of engagements a Tweet gets is the total number of times a user interacted with a Tweet. An interaction is defined as the user clicking anywhere on the Tweet, including Retweets, replies, follows, likes, links, cards, hashtags, embedded media, username, profile photo, or Tweet expansion.
-```{r twitter-engagements, echo=FALSE}
-
-ADC_tweets_organic <- ADC_tweets_organic %>% arrange(-engagements)
-ADC_tweets_engagements <- select(ADC_tweets_organic,text,created_at, engagements,hashtags)
-ADC_tweets_engagements <- ADC_tweets_engagements[1:5,]
-
-ADC_tweets_engagements %>% 
-  kable(col.names=c("Tweet","Date and Time","Engagements", "Hashtags Used")) %>% 
-  kable_styling() %>% 
-  column_spec(2,width="10em") %>% 
-  column_spec(1,width="35em")
-
-```
-
-#### Top 5: Most Impressionistic Tweets
-The number of impressions that a Tweet generates is the number of times users are served @ArcticDataCtr tweets in their timeline, search results, or from @ArcticDataCtr's profile.
-```{r twitter-impressions, echo=FALSE}
-
-ADC_tweets_organic <- ADC_tweets_organic %>% arrange(-impressions)
-ADC_tweets_impressions <- select(ADC_tweets_organic,text,created_at, impressions,hashtags)
-ADC_tweets_impressions <- ADC_tweets_impressions[1:5,]
-
-ADC_tweets_impressions %>% 
-  kable(col.names=c("Tweet","Date and Time","Impressions", "Hashtags Used")) %>% 
-  kable_styling() %>% 
-  column_spec(2,width="10em") %>% 
-  column_spec(1,width="35em")
-
-```
-
 
 #### Distribution of replies, retweets, and organic tweets
 Analyzing the ratio of replies, retweets and organic tweets can tell you a great deal about the type of account you’re analysing. No one likes a Twitter account that exclusively retweets for instance, without any individual content. Finding a good ratio of replies, retweets and organic tweets is therefore a key metric to monitor if one wishes to improve the performance of an account.
@@ -375,8 +332,37 @@ ggplot(tweet_ratio,aes(ymax=ymax, ymin=ymin, xmax=4,xmin=3,fill=TweetType))+
   scale_fill_manual(values=c( "#79FDB1","#B4E6EA","#1D244E"))
 ```
 
+```{r other-account-analysis, echo=FALSE,results=FALSE,warning=FALSE, message=FALSE}
+
+#this doesn't work - reached out to Jeannette for help
+influentialtwitter<-function(account_name){
+  account_name<- get_timeline("@account_name", n= 3200)
+  print(account_name)
+}
+
+influentialtwitter(US_APECS)
+
+#Webscrape the content from Twitter account @PolarImpact
+PolarImpact <- get_timeline("@PolarImpact", n= 3200)
+#select only the columns I need
+PolarImpact <- select(PolarImpact, status_id, created_at, text, display_text_width, reply_to_status_id, reply_to_screen_name,
+                  is_retweet, favorite_count, retweet_count, hashtags, media_type, mentions_screen_name,followers_count)
+#Take mentions out of the list
+PolarImpact$mentions_screen_name <- lapply(PolarImpact$mentions_screen_name, paste0, collapse = ", ")
+#grab only rows where this is true
+mentions<-filter(PolarImpact, grepl("arcticdatactr", mentions_screen_name, fixed = TRUE))
+#attach the account name to the end of the row so that later, when I rbind all of these together, I can make a bar graph with account as the x and number of retweets on the y
+mentions$account<-paste0("PolarImpact")
+
+```
+
+One way to understand how impactful our Tweets are is by looking at the Twitter accounts that are mentioning @ArcticDataCtr in their Tweets. Influential accounts in the Arctic research space: GlacierHub (3700 followers), PolarImpact (`r PolarImpact$followers_count[1]` followers), UArctic (6900 followers), Polar_Research (8600 followers), ArcticCouncil (18000 followers), PridePolar (1800 followers), PopePolar (5500 followers), IARPCCollab (700 followers), Toolik (500 followers), IARC_Alaska (2000 followers), ArcticResearch (3500 followers), NSIDC (15500 followers), US_APECS (700 followers), and MOSAiCArctic (9000 followers).
+
+Influential accounts in the data repository or open science space: DataONEorg (3600 followers), EDIgotdata (450 followers), NCEAS (9000 followers), USLTER (4600 followers), rOpenSci (29500 followers), NEON_sci (6100 followers), ESA_org (37000 followers), theAGU (65000 followers), ESIPfed (2200 followers), makedatacount (800 followers), and thecarpentries (7000 followers).
+
+
 ### When is the best time of day to post tweets?
-Only organic tweets are included in this analysis because engagements and impressions are not calculated the same way for retweets.
+Only organic tweets are included in this analysis because engagements and impressions are not calculated the same way for retweets or replies.
 ```{r time-of-day, echo=FALSE,results=FALSE,warning=FALSE, message=FALSE}
 #trying to normalize data by number of tweets
 count_tweets<-ADC_tweets_organic %>%  
