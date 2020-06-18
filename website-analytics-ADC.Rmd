@@ -10,27 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Arctic Data Center Website Metrics
 
-In addition to tracking Twitter metrics, I'm also interested in tracking traffic to arcticdata.io and different pages within that domain. 
-
-# Data Collection - Summary
-
-I collected data manually from Google Analytics once a month near the first of each month and added it to the folder Website Metrics. This summary file contains:
-
-* **month**: month of Tweet information
-* **year**: year of Tweet information
-* **date**: formatted the month as the first day of the months o that the date would format nicely for as.Date
-* **pubs_view**: number of pageviews for the publications page - https://arcticdata.io/publications/
-* **home_view**: number of pageviews for the home page - https://arcticdata.io/
-* **catalog_view**: number of pageviews for the catalog page - https://arcticdata.io/catalog
-* **catalogdata_view**: number of pageviews for the catalog/data page - https://arcticdata.io/catalog/data
-    * This is the page that people are directed to when they go back to the search from the Metacat site rather than the Wordpress site.
-* **data_view**: number of pageviews for the data page
-    * In October 2018, the catalog page was created - before that time, the data page URL was https://arcticdata.io/data. On and before October 2018, these are the pageviews for https://arcticdata.io/data. On and after November 2018, this variable is the sum of the catalog_view and catalogdata_view.
-* **submit_view**: number of pageviews for the data submission page - https://arcticdata.io/catalog/submit
-* **site_view**: Number of pageviews for the entire arcticdata.io domain.
-    * These are all the total pageview count for the associated pages, which is a total count and doesn't exclude repeat visitors or Arctic Data Center staff views.
-
-## Data Analysis
+In addition to tracking Twitter metrics, I'm tracking traffic to arcticdata.io and different pages within that domain. 
 
 ```{r load-packages, echo=FALSE}
 library(readr)
@@ -39,20 +19,19 @@ library(ggplot2)
 
 ```
 
-```{r raw-data, echo=FALSE,results=FALSE,message=FALSE}
+```{r raw-and-clean-data, echo=FALSE,results=FALSE,message=FALSE}
 website_summary_metrics <- read_csv("~/Documents/Twitter Analytics/Raw Data/website_summary_metrics.csv")
 website_summary_metrics$Date <-as.Date(website_summary_metrics$Date) 
 
 website_summary_metrics$Pub_Percent<-(website_summary_metrics$Pubs_View/website_summary_metrics$Site_View)*100
 website_summary_metrics$Data_Percent<-(website_summary_metrics$Data_View/website_summary_metrics$Site_View)*100
 website_summary_metrics$Submit_Percent<-(website_summary_metrics$Submit_View/website_summary_metrics$Site_View)*100
+website_summary_metrics$Twitter_Percent<-(website_summary_metrics$Twitter_Users/website_summary_metrics$Total_Users)*100
 ```
 
 ```{r display-table, echo=FALSE,results=FALSE,message=FALSE}
-knitr::kable(website_summary_metrics, caption = "Website Metrics Table")
+#knitr::kable(website_summary_metrics, caption = "Website Metrics Table")
 ```
-
-## Graphing Data
 
 ```{r creating-custom-theme, echo=FALSE,results=FALSE,message=FALSE}
 theme_ADC<- function() {
@@ -71,15 +50,24 @@ theme_ADC<- function() {
 }
 ```
 
+## Page Views
+
+This graph represents the total page views on the domain of arcticdata.io each month from the start of arcticdata.io in March 2016. This number includes all unique pageviews, including those from staff on NCEAS domains, but we have no reason to assume that NCEAS staff comprise a large quantity of pageviews. 
+
 ```{r monthly-views, echo=FALSE,results=FALSE,message=FALSE}
 monthlyviews<-ggplot(data = website_summary_metrics, aes(x=Date, y=Home_View)) +
   geom_point(color="#156760",size=2.5)+
-  labs(title='Monthly Page Views Over Time',
-       x="Date",
-       y="Page Views", hjust=.5)
+  labs(title='Monthly Page Views for Arcticdata.io',
+       x="Month",
+       y="Total Page Views", hjust=.5)+
+  stat_smooth(method="lm", se=FALSE, color="#B4E6EA")
 
 monthlyviews+theme_ADC()
 ```
+
+## Catalog Views
+
+This graph represents the total views of the landing page of the data catalog on the domain of arcticdata.io each month from the start of arcticdata.io in March 2016. Pages included in this analysis include arcticdata.io/catalog and arcticdata.io/catalog/data but NOT arcticdata.io/catalog/data/page/2 (etc). This number includes all unique catalog pageviews, including those from staff on NCEAS domains, but we have no reason to assume that NCEAS staff comprise a large quantity of pageviews. This is the page researchers go to in order to search data within the catalog.
 
 ```{r searcher-views, echo=FALSE}
 
@@ -94,51 +82,111 @@ lm_eqn <- function(website_summary_metrics){
 
 searchers<-ggplot(data = website_summary_metrics, aes(x=Date, y=Data_View)) +
   geom_point(color="#156760",size=2.5)+
-  labs(title='Monthly Search Catalog Page Views Over Time',
-       x="Date",
+  labs(title='Monthly Search Catalog Page Views',
+       x="Month",
        y="Search Catalog Page Views")+
   stat_smooth(method="lm", se=FALSE, color="#B4E6EA")
 
-searchers+theme_ADC() + 
-  geom_text(data=website_summary_metrics[40, ], y=1100, label = lm_eqn(website_summary_metrics), parse = TRUE)
-
+searchers+theme_ADC() #+ 
+  #geom_text(data=website_summary_metrics[40, ], y=1100, label = lm_eqn(website_summary_metrics), parse = TRUE)
 
 
 ```
 
+## Submitter Views
+
+This graph represents the total views of the submission page on the domain of arcticdata.io each month from the start of arcticdata.io in March 2016. This is the page that researchers go to in order to start their data submission process. 
 
 ```{r submitters, echo=FALSE}
 submitters<-ggplot(data = website_summary_metrics, aes(x=Date, y=Submit_View)) +
   geom_point(color="#156760",size=2.5)+
-    labs(title='Monthly Sumbit Page Visits Over Time',
-       x="Date",
-       y="Submit Page Visits")
+    labs(title='Monthly Submission Page Views',
+       x="Month",
+       y="Submit Page Views")+
+  stat_smooth(method="lm", se=FALSE, color="#B4E6EA")
 
 submitters+theme_ADC()
 ```
 
+## Publications Page Views
+
+This graph represents the total views of the landing page of the submission page on the domain of arcticdata.io each month from the start of arcticdata.io in March 2016. This is the page that people go to in order to see publications associated with the data in the Arctic Data Center, though this page was migrated over from the ACADIS gateway and was not updated with newer submissions of data to the Arctic Data Center.
 
 ```{r publications, echo=FALSE}
 publications<-ggplot(data = website_summary_metrics, aes(x=Date, y=Pubs_View)) +
   geom_point(color="#156760",size=2.5)+
-  labs(title='Monthly Publications Page Visits Over Time',
-       x="Date",
-       y="Publications")
+  labs(title='Monthly Publications Page Views',
+       x="Month",
+       y="Publications Page Views")+
+  stat_smooth(method="lm", se=FALSE, color="#B4E6EA")
 
 publications+theme_ADC()
 
 ```
 
+## Page Views as a Percentage of Total Views of arcticdata.io
+
+This graph represents the percentage of page views to the data catalog page and to the submission starting page each month from the start of arcticdata.io in March 2016. This data helps to give an iea of how many people are coming to the Arctic Data Center to submit their data versus view data already in the collection.
+
 ```{r percent-graph, echo=FALSE}
+#publications<-ggplot(data = website_summary_metrics, aes(x=Date, y=Pubs_View)) +
+#  geom_point(color="#156760",size=2.5)+
+
 percents<-ggplot()+
-  geom_point(data = website_summary_metrics, aes(x=Date, y=Pub_Percent),color="#1D244E",size=2.5)+
-  geom_point(data = website_summary_metrics, aes(x=Date, y=Data_Percent),color="#19B369",size=2.5)+
-  geom_point(data = website_summary_metrics, aes(x=Date, y=Submit_Percent),color="#79FDB1",size=2.5)+
+  geom_point(data = website_summary_metrics, aes(x=Date, y=Data_Percent, color='#19B369'),
+                 #color="#19B369",
+                 size=2.5)+
+  geom_point(data = website_summary_metrics, aes(x=Date, y=Submit_Percent, color='#1D244E'),
+             #color="#1D244E",
+             size=2.5)+
   labs(title='Percentage of Total Views by Page Type',
-       x="Date",
-       y="Percent (%)")
+       x="Month",
+       y="Percent (%)")+
+  scale_fill_identity(guide = 'legend') +
+  scale_colour_manual(name = 'Page', 
+         values =c('#1D244E'='#1D244E','#19B369'='#19B369'), labels = c('Catalog Page','Submission Page'))
 
 
-percents+theme_ADC()
+percents+theme_ADC()+
+  theme(legend.position = "right")+
+  theme(legend.title = element_blank())
 
 ```
+
+## Total Users of arcticdata.io
+
+This graph represents the unique visitors (determined largely by IP address) to arcticdata.io each month.
+
+```{r user-graph, echo=FALSE}
+
+users<-ggplot(data = website_summary_metrics, aes(x=Date, y=Total_Users))+
+  geom_point(color="#156760",size=2.5)+
+  labs(title='Unique Users of arcticdata.io',
+       x="Month",
+       y="Total Unique Users")+
+  stat_smooth(method="lm", se=FALSE, color="#B4E6EA")
+
+users+theme_ADC()  
+  #geom_text(data=website_summary_metrics[40, ], y=1400, label = lm_eqn(website_summary_metrics), parse = TRUE)
+
+```
+
+# Data Collection - Summary
+
+I collected data manually from Google Analytics once a month near the first of each month and added it to the folder Website Metrics. This summary file contains:
+
+* **month**: month of Tweet information
+* **year**: year of Tweet information
+* **date**: formatted the month as the first day of the months o that the date would format nicely for as.Date
+* **pubs_view**: number of pageviews for the publications page - https://arcticdata.io/publications/
+* **home_view**: number of pageviews for the home page - https://arcticdata.io/
+* **catalog_view**: number of pageviews for the catalog page - https://arcticdata.io/catalog
+* **catalogdata_view**: number of pageviews for the catalog/data page - https://arcticdata.io/catalog/data
+    * This is the page that people are directed to when they go back to the search from the Metacat site rather than the Wordpress site.
+* **data_view**: number of pageviews for the data page
+    * In October 2018, the catalog page was created - before that time, the data page URL was https://arcticdata.io/data. On and before October 2018, these are the pageviews for https://arcticdata.io/data. On and after November 2018, this variable is the sum of the catalog_view and catalogdata_view.
+* **submit_view**: number of pageviews for the data submission page - https://arcticdata.io/catalog/submit
+* **site_view**: Number of pageviews for the entire arcticdata.io domain.
+    * These are all the total pageview count for the associated pages, which is a total count and doesn't exclude repeat visitors or Arctic Data Center staff views.
+* **Twitter_Users**: Number of site visitors that arrived there from Twitter 
+* **Total_Users**: Number of site visitors
