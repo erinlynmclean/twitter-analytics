@@ -14,8 +14,40 @@ In addition to tracking Twitter metrics, I'm tracking traffic to arcticdata.io a
 
 ```{r load-packages, echo=FALSE}
 library(readr)
+library(tidyr)
 library(knitr)
 library(ggplot2)
+library(syuzhet)
+library(rtweet)
+library(dplyr)
+library(tidytext)
+library(kableExtra)
+library(ggraph)
+library(formattable)
+library(data.table)
+library(dendroTools)
+library(cowplot)
+library(tm)
+library(tokenizers)
+library(tidyverse)
+library(wordcloud)
+library(SnowballC)
+library(RColorBrewer)
+library(wordcloud2)
+library(widyr)
+library(igraph)
+library(topicmodels)
+library(DataCombine)
+library(ggThemeAssist)
+library(quanteda)
+library(data.table)
+library(lubridate)
+library(textclean)
+library(gridExtra)
+library(grid)
+library(lattice)
+library(gtable)
+library(ggpubr)
 
 ```
 
@@ -27,7 +59,26 @@ website_summary_metrics$Pub_Percent<-(website_summary_metrics$Pubs_View/website_
 website_summary_metrics$Data_Percent<-(website_summary_metrics$Data_View/website_summary_metrics$Site_View)*100
 website_summary_metrics$Submit_Percent<-(website_summary_metrics$Submit_View/website_summary_metrics$Site_View)*100
 website_summary_metrics$Twitter_Percent<-(website_summary_metrics$Twitter_Users/website_summary_metrics$Total_Users)*100
+
+raw_GA <- read_csv("~/Documents/Twitter Analytics/Raw Data/Web/2016-GA-Data.csv")
+raw_GA$Date <-as.Date(raw_GA$Date) 
+
+raw_GA <- raw_GA %>% 
+  group_by(Category) %>% 
+  filter(Category != "Exclude") %>% 
+  filter(Category != "Dataset") %>% 
+  filter(Category != "Share")
+
+sum_categories<-raw_GA %>%  
+  group_by(Date,Category) %>%
+  summarize(page_sum = sum(Pageviews,na.rm=TRUE)) %>% 
+  arrange(-page_sum)
+
+top_five <- by(sum_categories, sum_categories["Date"], head, n=3)
+top_five<-Reduce(rbind,top_five)
+
 ```
+
 
 ```{r display-table, echo=FALSE,results=FALSE,message=FALSE}
 #knitr::kable(website_summary_metrics, caption = "Website Metrics Table")
@@ -169,6 +220,14 @@ users<-ggplot(data = website_summary_metrics, aes(x=Date, y=Total_Users))+
 users+theme_ADC()  
   #geom_text(data=website_summary_metrics[40, ], y=1400, label = lm_eqn(website_summary_metrics), parse = TRUE)
 
+```
+
+```{r category-display, echo=FALSE,results=FALSE,message=FALSE}
+GAbar <- ggplot(data=top_five, aes(fill=Category, x=Date,y=page_sum))+
+  geom_bar(position="dodge",stat="identity")+
+  scale_fill_manual(values=c("#146660", "#1D244E", "#B3E1E7", "#79FD81","#19B369", "#000000"))
+
+GAbar+theme_ADC()
 ```
 
 # Data Collection - Summary
