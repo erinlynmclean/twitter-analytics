@@ -60,22 +60,43 @@ website_summary_metrics$Data_Percent<-(website_summary_metrics$Data_View/website
 website_summary_metrics$Submit_Percent<-(website_summary_metrics$Submit_View/website_summary_metrics$Site_View)*100
 website_summary_metrics$Twitter_Percent<-(website_summary_metrics$Twitter_Users/website_summary_metrics$Total_Users)*100
 
-raw_GA <- read_csv("~/Documents/Twitter Analytics/Raw Data/Web/2016-GA-Data.csv")
-raw_GA$Date <-as.Date(raw_GA$Date) 
+raw_GA16 <- read_csv("~/Documents/Twitter Analytics/Raw Data/Web/2016-GA-Data.csv")
+raw_GA16$Date <-as.Date(raw_GA16$Date) 
 
-raw_GA <- raw_GA %>% 
+raw_GA16 <- raw_GA16 %>% 
   group_by(Category) %>% 
   filter(Category != "Exclude") %>% 
   filter(Category != "Dataset") %>% 
-  filter(Category != "Share")
+  filter(Category != "Share")%>% 
+  filter(Category != "Cathome")%>% 
+  filter(Category != "Home")
 
-sum_categories<-raw_GA %>%  
+sum_categories16<-raw_GA16 %>%  
   group_by(Date,Category) %>%
   summarize(page_sum = sum(Pageviews,na.rm=TRUE)) %>% 
   arrange(-page_sum)
 
-top_five <- by(sum_categories, sum_categories["Date"], head, n=3)
-top_five<-Reduce(rbind,top_five)
+top16_3 <- by(sum_categories16, sum_categories16["Date"], head, n=3)
+top16_3<-Reduce(rbind,top16_3)
+
+raw_GA17 <- read_csv("~/Documents/Twitter Analytics/Raw Data/Web/2017-GA-Data.csv")
+raw_GA17$Date <-as.Date(raw_GA17$Date) 
+
+raw_GA17 <- raw_GA17 %>% 
+  group_by(Category) %>% 
+  filter(Category != "Exclude") %>% 
+  filter(Category != "Dataset") %>% 
+  filter(Category != "Share")%>% 
+  filter(Category != "Cathome")%>% 
+  filter(Category != "Home")
+
+sum_categories17<-raw_GA17 %>%  
+  group_by(Date,Category) %>%
+  summarize(page_sum = sum(Pageviews,na.rm=TRUE)) %>% 
+  arrange(-page_sum)
+
+top17_3 <- by(sum_categories17, sum_categories17["Date"], head, n=3)
+top17_3<-Reduce(rbind,top17_3)
 
 ```
 
@@ -223,11 +244,17 @@ users+theme_ADC()
 ```
 
 ```{r category-display, echo=FALSE,results=FALSE,message=FALSE}
-GAbar <- ggplot(data=top_five, aes(fill=Category, x=Date,y=page_sum))+
+GAbar16 <- ggplot(data=top16_3, aes(fill=Category, x=Date,y=page_sum))+
   geom_bar(position="dodge",stat="identity")+
-  scale_fill_manual(values=c("#146660", "#1D244E", "#B3E1E7", "#79FD81","#19B369", "#000000"))
+  scale_fill_manual(values=c("#146660", "#1D244E", "#B3E1E7", "#79FD81","#19B369", "#797979"))
 
-GAbar+theme_ADC()
+GAbar16+theme_ADC()
+
+GAbar17 <- ggplot(data=top17_3, aes(fill=Category, x=Date,y=page_sum))+
+  geom_bar(position="dodge",stat="identity")+
+  scale_fill_manual(values=c("#146660", "#1D244E", "#B3E1E7", "#79FD81","#19B369", "#797979"))
+
+GAbar17+theme_ADC()
 ```
 
 # Data Collection - Summary

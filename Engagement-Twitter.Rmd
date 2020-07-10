@@ -345,6 +345,19 @@ influentialtwitter<-function(account_name, n){
   return(df_results) #always goes at the end of the function
 }
 
+twitteraccounts<-c("@GlacierHub","@PolarImpact","@UArctic","@Polar_Research","@ArcticCouncil","@PridePolar","@PopePolar","@IARPCCollab","@Toolik" , "@IARC_Alaska","@ArcticResearch","@NSIDC","@US_APECS","@MOSAiCArctic")
+
+
+# call things by vector index
+result<-list() #creates empty list
+for (i in 1:length(twitteraccounts)) {
+  result[[i]] #makes it a list of dataframe
+  <- influentialtwitter(twitteraccounts[i]) #for each i, it'll run the first, then the second
+  
+}
+
+allresults<- do.call(rbind,result) #this only works with the same columns
+
 toolik_results <- influentialtwitter("@Toolik",n=30)
 
 ```
