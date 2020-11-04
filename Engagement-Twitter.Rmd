@@ -1,12 +1,13 @@
 ---
 title: "Twitter Analytics - Arctic Data Center"
-date: "Last updated June 2020"
+date: "Last updated September 2020"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, echo=FALSE,results=FALSE,message=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
 ```{r load-packages, echo=FALSE,results=FALSE,message=FALSE}
 library(readr)
 library(tidyr)
@@ -51,9 +52,11 @@ This report contains information about the Arctic Data Center's Twitter account,
 
 ```{r manually-gathered-data, echo=FALSE,results=FALSE,message=FALSE}
 twitter_summary_metrics <- read_csv("~/Documents/Twitter Analytics/Raw Data/twitter-summary-metrics.csv")
+twitter_summary_metrics %>% 
+    mutate(Number_Followers = na_if(Number_Followers, "null"))
 twitter_summary_metrics$Date <-as.Date(twitter_summary_metrics$Date) 
 ```
-```{r downloaded-scraped-data, echo=FALSE}
+```{r downloaded-scraped-data, echo=FALSE,results=FALSE,message=FALSE}
 
 #Getting the timeline of tweets from rtweet
 ADC_raw <- get_timeline("@ArcticDataCtr", n= 3200)
@@ -75,7 +78,7 @@ ADC_downloaded_merge <- do.call(rbind, ADC_downloaded) %>%
 
 ADC <- left_join(ADC_raw, ADC_downloaded_merge, by = c("status_id" = "Tweet.id"))
 ```
-```{r cleaning-data, echo=FALSE}
+```{r cleaning-data, echo=FALSE,results=FALSE,message=FALSE}
 
 #getting rid of any HTML symbols so I don't have things like &amp; in the text of the tweets
 ADC$text <-replace_html(ADC$text,symbol=TRUE)
@@ -333,87 +336,105 @@ ggplot(tweet_ratio,aes(ymax=ymax, ymin=ymin, xmax=4,xmin=3,fill=TweetType))+
   scale_fill_manual(values=c( "#79FDB1","#B4E6EA","#1D244E"))
 ```
 
-```{r other-account-analysis, echo=FALSE,results=FALSE,warning=FALSE, message=FALSE,eval=FALSE}
 
-influentialtwitter<-function(account_name, n){
-  df<- get_timeline(account_name, n= n)
-  df <- select(df, status_id, created_at, text, display_text_width, reply_to_status_id, reply_to_screen_name,
-                  is_retweet, favorite_count, retweet_count, hashtags, media_type, mentions_screen_name,followers_count)
-  df$mentions_screen_name <- lapply(df$mentions_screen_name, paste0, collapse = ", ")
-  df_results<-filter(df, grepl("arcticdatactr", mentions_screen_name, fixed = TRUE))
-  df_results$account<-(account_name)
-  return(df_results) #always goes at the end of the function
+
+```{r other-account-analysis, echo=FALSE,results=FALSE,warning=FALSE, message=FALSE}
+
+influentialtwitter <- function(account_name, n){
+    df <- get_timeline(account_name, n = n)
+    df <- select(df, status_id, created_at, text, display_text_width, reply_to_status_id, reply_to_screen_name,
+                 is_retweet, favorite_count, retweet_count, hashtags, media_type, mentions_screen_name,followers_count)
+    df$mentions_screen_name <- lapply(df$mentions_screen_name, paste0, collapse = ", ") %>% unlist()
+    df_results<-filter(df, grepl("arcticdatactr", mentions_screen_name, fixed = TRUE))
+    if (nrow(df_results) > 0){
+        df_results$account <- account_name
+    } else if (nrow(df_results) == 0){
+        df_results <- data.frame(account = account_name)
+    }
+    return(df_results) #always goes at the end of the function
 }
+accounts<-c("@PolarImpact","@Polar_Research","@PridePolar","@PopePolar","@IARPCCollab","@Toolik" , "@IARC_Alaska","@ArcticResearch","@US_APECS","@DataONEorg", "@EDIgotdata", "@NCEAS", "@USLTER", "@rOpenSci", "@NEON_sci", "@ESA_org", "@ESIPfed")
 
-twitteraccounts<-c("@GlacierHub","@PolarImpact","@UArctic","@Polar_Research","@ArcticCouncil","@PridePolar","@PopePolar","@IARPCCollab","@Toolik" , "@IARC_Alaska","@ArcticResearch","@NSIDC","@US_APECS","@MOSAiCArctic")
+result_list <- lapply(accounts, influentialtwitter, n = 3200)
+result_all <- do.call(bind_rows, result_list)
 
+#orgs that would be influential but haven't tweeted us lol so leave them out for now "@makedatacount", "@thecarpentries","@theAGU","@NSIDC","@MOSAiCArctic","@UArctic","@ArcticCouncil","@GlacierHub",
+```
 
-# call things by vector index
-result<-list() #creates empty list
-for (i in 1:length(twitteraccounts)) {
-  result[[i]] #makes it a list of dataframe
-  <- influentialtwitter(twitteraccounts[i]) #for each i, it'll run the first, then the second
-  
-}
+### Engagement with the larger Arctic Research / Policy Community 
 
-allresults<- do.call(rbind,result) #this only works with the same columns
+One way to understand how impactful our Tweets are is by looking at the Twitter accounts that are mentioning @ArcticDataCtr in their Tweets. Influential accounts in the Arctic research space: PolarImpact (`r result_all$followers_count[2]` followers), Polar_Research (`r result_all$followers_count[5]` followers), PridePolar (`r result_all$followers_count[8]` followers), PopePolar (`r result_all$followers_count[9]` followers), IARPCCollab (`r result_all$followers_count[23]` followers), Toolik (`r result_all$followers_count[30]` followers), IARC_Alaska (`r result_all$followers_count[44]` followers), ArcticResearch (`r result_all$followers_count[45]` followers), and US_APECS (`r result_all$followers_count[73]` followers).
 
-toolik_results <- influentialtwitter("@Toolik",n=30)
+Influential accounts in the data repository or open science space: DataONEorg (`r result_all$followers_count[80]` followers), EDIgotdata (`r result_all$followers_count[119]` followers), NCEAS (`r result_all$followers_count[195]` followers), USLTER (`r result_all$followers_count[318]` followers), rOpenSci (`r result_all$followers_count[350]` followers), NEON_sci (`r result_all$followers_count[351]` followers), ESA_org (`r result_all$followers_count[359]` followers), and ESIPfed (`r result_all$followers_count[364]` followers).
+
+```{r other-account-analysis-graphs, echo=FALSE,results=FALSE,warning=FALSE, message=FALSE}
+by_account <- result_all %>% group_by(account)
+
+by_account<- by_account %>% summarise(
+  total=n(),
+  favorite_count = mean(favorite_count),
+  retweet_count = mean(retweet_count)
+) %>% 
+arrange(desc(retweet_count))
+
+#Adding ADC data to table
+by_account
+ADC_tweets_organicmean <- ADC_tweets_organic %>% summarise(
+  favorite_count = mean(favorite_count),
+  retweet_count = mean(retweet_count)
+)
+
+ADCmetrics<-data.frame("@ArcticDataCtr","NA", ADC_tweets_organicmean$favorite_count[1],ADC_tweets_organicmean$retweet_count[1])
+names(ADCmetrics)<-c("account","total","favorite_count","retweet_count")
+
+by_account_ADC<-rbind(by_account,ADCmetrics)
+by_account_ADC
+
+by_account_RT<-ggplot(data= by_account_ADC, aes(x=account, y=retweet_count)) +
+  geom_col(fill="#B3E1E7")+
+  labs(title='Mean Retweets from Influential Accounts',
+       x="Account Handle",
+       y="Mean Number of Retweets")
+
+by_account_RT<-by_account_RT+theme_ADC()
+
+by_account<- by_account %>% arrange(desc(favorite_count))
+
+by_account_fav<-ggplot(data= by_account_ADC, aes(x=account, y=favorite_count)) +
+  geom_col(fill="#79FDB1")+
+  labs(title='Mean Favorites from Influential Accounts',
+       x="Account Handle",
+       y="Mean Number of Favorites")
+
+by_account_fav <-by_account_fav+theme_ADC()
+
+by_account_fav
+
+by_account_ADC_fav<-by_account_ADC %>% arrange(desc(favorite_count))
+by_account_ADC_fav
+```
+
+This graph illustrates that the Arctic Data Center's organic tweets are favorited often when we are mentioned and/or retweeted by some accounts (eg `r by_account_ADC_fav$account[1]` with a mean of `r round(by_account_ADC_fav$favorite_count[1],2)` favorites per tweet, `r by_account_ADC_fav$account[2]` with a mean of `r round(by_account_ADC_fav$favorite_count[2],2)` favorites per tweet, and `r by_account_ADC_fav$account[3]` with a mean of `r round(by_account_ADC_fav$favorite_count[3],2)` favorites per tweet). On the flip side, there are some accounts that when we’re mentioned, the tweets get no favorites at all (eg `r by_account_ADC_fav$account[16]` with a mean of `r round(by_account_ADC_fav$favorite_count[16],2)` favorites per tweet, `r by_account_ADC_fav$account[17]` with a mean of `r round(by_account_ADC_fav$favorite_count[17],2)` favorites per tweet, and `r by_account_ADC_fav$account[18]` with a mean of `r round(by_account_ADC_fav$favorite_count[18],2)` favorites per tweet).
+
+```{r other-account-analysis-graphs2, echo=FALSE,results=FALSE,warning=FALSE, message=FALSE}
+
+by_account_RT
+
+by_account_ADC_rt<-by_account_ADC %>% arrange(desc(retweet_count))
+by_account_ADC_rt
+
+twitter_summary_metrics
 
 ```
 
-One way to understand how impactful our Tweets are is by looking at the Twitter accounts that are mentioning @ArcticDataCtr in their Tweets. Influential accounts in the Arctic research space: GlacierHub (3700 followers), PolarImpact (r PolarImpact$followers_count[1] followers), UArctic (6900 followers), Polar_Research (8600 followers), ArcticCouncil (18000 followers), PridePolar (1800 followers), PopePolar (5500 followers), IARPCCollab (700 followers), Toolik (500 followers), IARC_Alaska (2000 followers), ArcticResearch (3500 followers), NSIDC (15500 followers), US_APECS (700 followers), and MOSAiCArctic (9000 followers).
 
-Influential accounts in the data repository or open science space: DataONEorg (3600 followers), EDIgotdata (450 followers), NCEAS (9000 followers), USLTER (4600 followers), rOpenSci (29500 followers), NEON_sci (6100 followers), ESA_org (37000 followers), theAGU (65000 followers), ESIPfed (2200 followers), makedatacount (800 followers), and thecarpentries (7000 followers).
+Retweeting is a more direct measure of engagement, as this action puts the ArcticDataCtr name out to a wider variety of followers than just the `r twitter_summary_metrics$Number_Followers[1]` followers we have. This graph illustrates that the Arctic Data Center's organic tweets are retweeted often when we are mentioned and/or retweeted by some accounts (eg `r by_account_ADC_rt$account[1]` with a mean of `r round(by_account_ADC_rt$retweet_count[1],2)` retweets per tweet, `r by_account_ADC_rt$account[2]` with a mean of `r round(by_account_ADC_rt$retweet_count[2],2)` retweets per tweet, and `r by_account_ADC_rt$account[3]` with a mean of `r round(by_account_ADC_rt$retweet_count[3],2)` retweets per tweet). On the flip side, there are some accounts that when we’re mentioned, the tweets get fewer retweets (eg `r by_account_ADC_rt$account[15]` with a mean of `r round(by_account_ADC_rt$retweet_count[15],2)` retweets per tweet, `r by_account_ADC_rt$account[16]` with a mean of `r round(by_account_ADC_rt$retweet_count[16],2)` retweets per tweet, and `r by_account_ADC_rt$account[17]` with a mean of `r round(by_account_ADC_rt$retweet_count[17],2)` retweets per tweet).
 
-###Twitter as a gateway to arcticdata.io
+This graph also shows that tweets from the Arctic Data Center's accounts are getting the fewest retweets as compared to these more influential account - that may be a result of their larger reach in sheer number of followers.
 
-With the power of Google Analytics, we can see what users of arcticdata.io are coming to the site from Twitter. This analysis shows that for every organic Tweet that we produce, we add `r coef(summary(equation))["n","Estimate"]` in unique visitors to our site. That may not seem like much averaged over the entire lifespan of the Twitter account, but if we only investigate times when the account was regularly updated (that is, more than 5 Tweets in a month)...
+These graphs illustrate places where we should increase our reach - focus on generating content for these influential accounts to favorite and retweet.
 
-```{r website-data-clean echo=FALSE,results=FALSE,warning=FALSE, message=FALSE}
-website_summary_metrics <- read_csv("~/Documents/Twitter Analytics/Raw Data/website_summary_metrics.csv")
-website_summary_metrics$Date <-as.Date(website_summary_metrics$Date) 
-
-website_summary_metrics$Pub_Percent<-(website_summary_metrics$Pubs_View/website_summary_metrics$Site_View)*100
-website_summary_metrics$Data_Percent<-(website_summary_metrics$Data_View/website_summary_metrics$Site_View)*100
-website_summary_metrics$Submit_Percent<-(website_summary_metrics$Submit_View/website_summary_metrics$Site_View)*100
-website_summary_metrics$Twitter_Percent<-(website_summary_metrics$Twitter_Users/website_summary_metrics$Total_Users)*100
-```
-
-```{r %-twitter-site-all echo=FALSE,results=FALSE,warning=FALSE, message=FALSE}
-#this graph doesn't tell the best story lol let's re-eval
-users<-ggplot(data = website_summary_metrics, aes(x=Date, y=Twitter_Percent))+
-  geom_point(color="#1D244E",size=2.5)+
-  labs(title='Users from Twitter as a Percentage of Total Users',
-       x="Date",
-       y="Percentage of Users from Twitter")+
-    stat_smooth(method="lm", se=FALSE, color="#B3E1E7",size=1)
-
-users<-users+theme_ADC()
-users
-
-```
-
-```{r twitter-site-all echo=FALSE,results=FALSE,warning=FALSE, message=FALSE}
-#quick bind of relevant data, 
-summarydata <- left_join(bymonth, website_summary_metrics, by = c("date" = "Date"))
-
-tweetsusers<-ggplot(data=summarydata, aes(x=n, y=Twitter_Users))+
-  geom_point(color="#1D244E",size=2.5)+
-  labs(title='Site Users from Twitter vs Organic Tweets',
-       x="Number of Organic Tweets per Month",
-       y="Number of Users to arcticdata.io from Twitter")+
-    stat_smooth(method="lm", se=FALSE, color="#B3E1E7",size=1)+
-  stat_regline_equation(label.x = 20, label.y = 10)
-
-equation<-lm(Twitter_Users~n, data=summarydata)
-
-tweetsusers<-tweetsusers+theme_ADC()
-tweetsusers
-
-```
-
-```{r twitter-site-active echo=FALSE,results=FALSE,warning=FALSE, message=FALSE}
+```{r twitter-site-active, echo=FALSE,results=FALSE,warning=FALSE,message=FALSE,eval=FALSE}
 
 #this time giving the active tweeting months more of a weight 
 summarydataactive <-summarydata[summarydata$date>=2020-03-01, ] 
@@ -434,7 +455,9 @@ activetweetsusers
 ```
 
 ### When is the best time of day to post tweets?
-Only organic tweets are included in this analysis because engagements and impressions are not calculated the same way for retweets or replies.
+Obviously we want to make sure we're tweeting at the right times, so that our community will see and interact with those tweets. Only organic tweets are included in this analysis because engagements and impressions are not calculated the same way for retweets or replies.
+
+The next step, using this data, will be to tweet more at different times so that there is more data on which to base an opinion.
 ```{r time-of-day, echo=FALSE,results=FALSE,warning=FALSE, message=FALSE}
 #trying to normalize data by number of tweets
 count_tweets<-ADC_tweets_organic %>%  
@@ -458,7 +481,7 @@ byhour$normalimpressions<-(byhour$imp_sum/byhour$n)
 
 normal_engagements<-ggplot(data= byhour, aes(x=Hour, y=normalengagement)) +
   geom_col(fill="#156760", color="#79FDB1")+
-  labs(title='Time of Tweet vs Engagements (Normalized)',
+  labs(title='Timestamp vs Engagements (Normalized)',
        x="Time",
        y="Normalized Engagements")
 
@@ -466,7 +489,7 @@ normal_engagements<-normal_engagements+theme_ADC()
 
 tweettime_engagements<-ggplot(data = ADC_tweets_organic, aes(x=Hour, y=engagements)) +
   geom_col(fill="#156760", color="#79FDB1")+
-  labs(title='Time of Tweet vs Engagements',
+  labs(title='Timestamp vs Engagements',
        x="Time",
        y="Number of Engagements")
 
@@ -474,7 +497,7 @@ tweettime_engagements<-tweettime_engagements+theme_ADC()
 
 normal_impressions<-ggplot(data= byhour, aes(x=Hour, y=normalimpressions)) +
   geom_col(fill="#79FDB1", color="#156760")+
-  labs(title='Time of Tweet vs Impressions (Normalized)',
+  labs(title='Timestamp vs Impressions (Normalized)',
        x="Time",
        y="Normalized Impressions")
 
@@ -482,7 +505,7 @@ normal_impressions<-normal_impressions+theme_ADC()
 
 tweettime_impressions<-ggplot(data = ADC_tweets_organic, aes(x=Hour, y=impressions)) +
   geom_col(fill="#79FDB1", color="#156760")+
-  labs(title='Time of Tweet vs Impressions',
+  labs(title='Timestamp vs Impressions',
        x="Time",
        y="Number of Impressions")
 
@@ -493,6 +516,102 @@ plot_grid(tweettime_engagements,normal_engagements, tweettime_impressions, norma
           rel_widths = c(1.5,1.5,1.5,1.5))
 
 ```
+
+### Twitter as a gateway to arcticdata.io
+
+With the power of Google Analytics, we can see how users of arcticdata.io are interacting with the site - where they arrived from and what they do when they're there. 
+
+```{r website-data-clean, echo=FALSE,results=FALSE,warning=FALSE,message=FALSE}
+website_summary_metrics <- read_csv("~/Documents/Twitter Analytics/Raw Data/website_summary_metrics.csv")
+website_summary_metrics$Date <-as.Date(website_summary_metrics$Date) 
+
+website_summary_metrics$Pub_Percent<-(website_summary_metrics$Pubs_View/website_summary_metrics$Site_View)*100
+website_summary_metrics$Data_Percent<-(website_summary_metrics$Data_View/website_summary_metrics$Site_View)*100
+website_summary_metrics$Submit_Percent<-(website_summary_metrics$Submit_View/website_summary_metrics$Site_View)*100
+website_summary_metrics$Twitter_Percent<-(website_summary_metrics$Twitter_Users/website_summary_metrics$Total_Users)*100
+
+website_summary_metrics
+```
+
+```{r %-twitter-site-all, echo=FALSE,results=FALSE,warning=FALSE,message=FALSE,eval=FALSE}
+#this graph doesn't tell the best story lol let's re-eval
+users<-ggplot(data = website_summary_metrics, aes(x=Date, y=Twitter_Percent))+
+  geom_point(color="#1D244E",size=2.5)+
+  labs(title='Users from Twitter as a Percentage of Total Users',
+       x="Date",
+       y="Percentage of Users from Twitter")+
+    stat_smooth(method="lm", se=FALSE, color="#B3E1E7",size=1)
+
+users<-users+theme_ADC()
+users
+
+```
+
+```{r twitter-site-all, echo=FALSE,results=FALSE,warning=FALSE,message=FALSE}
+#quick bind of relevant data, 
+summarydata <- left_join(bymonth, website_summary_metrics, by = c("date" = "Date"))
+summarydata
+
+recentsum<-summarydata[38:44,]
+
+
+```
+
+
+```{r graphsuser, echo=FALSE,results=FALSE,warning=FALSE,message=FALSE}
+tweetsusers<-ggplot(data=summarydata, aes(x=n, y=Twitter_Users))+
+  geom_point(color="#1D244E",size=2.5)+
+  labs(title='Site Users from Twitter vs Organic Tweets',
+       x="Number of Organic Tweets per Month",
+       y="Number of Users to arcticdata.io from Twitter")+
+    stat_smooth(method="lm", se=FALSE, color="#B3E1E7",size=1)+
+  stat_regline_equation(label.x = 20, label.y = 25)
+
+equation<-lm(Twitter_Users~n, data=summarydata)
+r<-coef(summary(equation))["n","Estimate"]
+
+tweetsusers<-tweetsusers+theme_ADC()
+tweetsusers
+```
+
+We can see how many users are arriving to the site directly from a Twitter link. This analysis shows that for every organic Tweet that we produce, we add `r round(coef(summary(equation))["n","Estimate"],2)` unique visitors specifically from Twitter to our site. That may not seem like much, but it's a metric that we can now track and keep striving to increase.
+
+```{r twitter-site-all-users, echo=FALSE,results=FALSE,warning=FALSE,message=FALSE}
+#tweetsusersrec<-ggplot(data=recentsum, aes(x=n, y=Twitter_Users))+
+#  geom_point(color="#1D244E",size=2.5)+
+#  labs(title='Site Users from Twitter vs Organic Tweets',
+#       x="Number of Organic Tweets per Month",
+#       y="Number of Users to arcticdata.io from Twitter")+
+#    stat_smooth(method="lm", se=FALSE, color="#B3E1E7",size=1)+
+#  stat_regline_equation(label.x = 20, label.y = 10)
+
+#equation2<-lm(Twitter_Users~n, data=recentsum)
+
+#tweetsusersrec<-tweetsusersrec+theme_ADC()
+#tweetsusersrec
+
+siteusers<-ggplot(data=summarydata, aes(x=n, y=Site_View))+
+  geom_point(color="#1D244E",size=2.5)+
+  labs(title='Site Users vs Organic Tweets',
+       x="Number of Organic Tweets per Month",
+       y="Number of Users to arcticdata.io")+
+    stat_smooth(method="lm", se=FALSE, color="#B3E1E7",size=1)+
+  stat_regline_equation(label.x = 20, label.y = 2500)
+
+equation2<-lm(Site_View~n, data=summarydata)
+r<-coef(summary(equation2))["n","Estimate"]
+r
+equation2
+
+siteusers<-siteusers+theme_ADC()
+siteusers
+
+```
+
+When total users of the Arctic Data Center are correlated to the number of organic Tweets per month, we see a much more impactful picture. An active Twitter presence keeps the Arctic Data Center top of mind for researchers and others in the data sharing community, and that seems to translate into increased site visits. This analysis shows that for every organic Tweet that we produce, we add `r round(coef(summary(equation2))["n","Estimate"],2)` unique visitors to our site. Of course, this is less of a direct link, but it's encouraging to see that positive correlation.
+
+
+
 
 ### Data Collection - Summary
 

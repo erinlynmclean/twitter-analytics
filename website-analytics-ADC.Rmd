@@ -1,6 +1,6 @@
 ---
 title: "Website Analytics - Arctic Data Center"
-date: "Last Updated May 2020"
+date: "Last Updated August 2020"
 output: html_document
 ---
 
@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 In addition to tracking Twitter metrics, I'm tracking traffic to arcticdata.io and different pages within that domain. 
 
-```{r load-packages, echo=FALSE}
+```{r load-packages, echo=FALSE,results=FALSE,message=FALSE, warning=FALSE}
 library(readr)
 library(tidyr)
 library(knitr)
@@ -51,7 +51,7 @@ library(ggpubr)
 
 ```
 
-```{r raw-and-clean-data, echo=FALSE,results=FALSE,message=FALSE}
+```{r raw-and-clean-data, echo=FALSE,results=FALSE,message=FALSE, warning=FALSE}
 website_summary_metrics <- read_csv("~/Documents/Twitter Analytics/Raw Data/website_summary_metrics.csv")
 website_summary_metrics$Date <-as.Date(website_summary_metrics$Date) 
 
@@ -59,6 +59,8 @@ website_summary_metrics$Pub_Percent<-(website_summary_metrics$Pubs_View/website_
 website_summary_metrics$Data_Percent<-(website_summary_metrics$Data_View/website_summary_metrics$Site_View)*100
 website_summary_metrics$Submit_Percent<-(website_summary_metrics$Submit_View/website_summary_metrics$Site_View)*100
 website_summary_metrics$Twitter_Percent<-(website_summary_metrics$Twitter_Users/website_summary_metrics$Total_Users)*100
+
+#2016
 
 raw_GA16 <- read_csv("~/Documents/Twitter Analytics/Raw Data/Web/2016-GA-Data.csv")
 raw_GA16$Date <-as.Date(raw_GA16$Date) 
@@ -79,6 +81,8 @@ sum_categories16<-raw_GA16 %>%
 top16_3 <- by(sum_categories16, sum_categories16["Date"], head, n=3)
 top16_3<-Reduce(rbind,top16_3)
 
+#2017
+
 raw_GA17 <- read_csv("~/Documents/Twitter Analytics/Raw Data/Web/2017-GA-Data.csv")
 raw_GA17$Date <-as.Date(raw_GA17$Date) 
 
@@ -97,6 +101,69 @@ sum_categories17<-raw_GA17 %>%
 
 top17_3 <- by(sum_categories17, sum_categories17["Date"], head, n=3)
 top17_3<-Reduce(rbind,top17_3)
+
+#2018
+
+raw_GA18 <- read_csv("~/Documents/Twitter Analytics/Raw Data/Web/2018-GA-Data.csv")
+raw_GA18$Date <-as.Date(raw_GA18$Date) 
+
+raw_GA18 <- raw_GA18 %>% 
+  group_by(Category) %>% 
+  filter(Category != "Exclude") %>% 
+  filter(Category != "Dataset") %>% 
+  filter(Category != "Share")%>% 
+  filter(Category != "Cathome")%>% 
+  filter(Category != "Home")
+
+sum_categories18<-raw_GA18 %>%  
+  group_by(Date,Category) %>%
+  summarize(page_sum = sum(Pageviews,na.rm=TRUE)) %>% 
+  arrange(-page_sum)
+
+top18_3 <- by(sum_categories18, sum_categories18["Date"], head, n=3)
+top18_3<-Reduce(rbind,top18_3)
+
+#2019
+
+raw_GA19 <- read_csv("~/Documents/Twitter Analytics/Raw Data/Web/2019-GA-Data.csv")
+raw_GA19$Date <-as.Date(raw_GA19$Date) 
+
+raw_GA19 <- raw_GA19 %>% 
+  group_by(Category) %>% 
+  filter(Category != "Exclude") %>% 
+  filter(Category != "Dataset") %>% 
+  filter(Category != "Share")%>% 
+  filter(Category != "Cathome")%>% 
+  filter(Category != "Home")
+
+sum_categories19<-raw_GA19 %>%  
+  group_by(Date,Category) %>%
+  summarize(page_sum = sum(Pageviews,na.rm=TRUE)) %>% 
+  arrange(-page_sum)
+
+top19_3 <- by(sum_categories19, sum_categories19["Date"], head, n=3)
+top19_3<-Reduce(rbind,top19_3)
+
+#2020
+
+raw_GA20 <- read_csv("~/Documents/Twitter Analytics/Raw Data/Web/2020-GA-Data.csv")
+raw_GA20$Date <-as.Date(raw_GA20$Date) 
+
+raw_GA20 <- raw_GA20 %>% 
+  group_by(Category) %>% 
+  filter(Category != "Exclude") %>% 
+  filter(Category != "Dataset") %>% 
+  filter(Category != "Share")%>% 
+  filter(Category != "Cathome")%>% 
+  filter(Category != "Home")
+
+sum_categories20<-raw_GA20 %>%  
+  group_by(Date,Category) %>%
+  summarize(page_sum = sum(Pageviews,na.rm=TRUE)) %>% 
+  arrange(-page_sum)
+
+top20_3 <- by(sum_categories20, sum_categories20["Date"], head, n=3)
+top20_3<-Reduce(rbind,top20_3)
 
 ```
 
@@ -243,13 +310,25 @@ users+theme_ADC()
 
 ```
 
-```{r category-display, echo=FALSE,results=FALSE,message=FALSE}
+## Top Visited Pages in the arcticdata.io domain
+
+These next graphs illustrate the top three pages visited in the arcticdata.io domain each month. In 2016, the top three pages in any given month were three of: the About page, a user's data page or profile within the Arctic Data Center, the News page, the Q&A page, the page to Submit data, and the page with information about the team.
+
+### 2016
+
+```{r category-display-2016, echo=FALSE,results=FALSE,message=FALSE}
 GAbar16 <- ggplot(data=top16_3, aes(fill=Category, x=Date,y=page_sum))+
   geom_bar(position="dodge",stat="identity")+
   scale_fill_manual(values=c("#146660", "#1D244E", "#B3E1E7", "#79FD81","#19B369", "#797979"))
 
 GAbar16+theme_ADC()
+```
 
+### 2017
+
+In 2017, the top three pages in any given month were three of: the About page, a user's data page or profile within the Arctic Data Center, the News page, the page holding information on proposal submission for the synthesis working group, the page to Submit data, and the page with information about training.
+
+```{r category-display-2017, echo=FALSE,results=FALSE,message=FALSE}
 GAbar17 <- ggplot(data=top17_3, aes(fill=Category, x=Date,y=page_sum))+
   geom_bar(position="dodge",stat="identity")+
   scale_fill_manual(values=c("#146660", "#1D244E", "#B3E1E7", "#79FD81","#19B369", "#797979"))
@@ -257,13 +336,50 @@ GAbar17 <- ggplot(data=top17_3, aes(fill=Category, x=Date,y=page_sum))+
 GAbar17+theme_ADC()
 ```
 
+### 2018
+
+In 2018, the top three pages in any given month were three of: the Blog page (a new addition for 2018, with Dataset Highlights becoming a regular feature), a user's data page or profile within the Arctic Data Center, the News page, pages in the projects domain (the precursor to portals), the page holding information on proposal submission for the synthesis working group, the page to Submit data, and the page with information about training.
+
+```{r category-display-2018, echo=FALSE,results=FALSE,message=FALSE}
+GAbar18 <- ggplot(data=top18_3, aes(fill=Category, x=Date,y=page_sum))+
+  geom_bar(position="dodge",stat="identity")+
+  scale_fill_manual(values=c( "#1D244E", "#B3E1E7", "#19B369", "#146660","#797979","#79FD81","#000000"))
+
+GAbar18+theme_ADC()
+```
+
+### 2019
+
+In 2019, the top three pages in any given month were three of: the About page, the Blog, a user's data page or profile within the Arctic Data Center, any of the Portals that were set up (a new feature introduced in late 2019), pages in the projects domain (the precursor to portals), the page to Submit data, the page with information about the team, and the page with information about training.
+
+```{r category-display-2019, echo=FALSE,results=FALSE,message=FALSE}
+GAbar19 <- ggplot(data=top19_3, aes(fill=Category, x=Date,y=page_sum))+
+  geom_bar(position="dodge",stat="identity")+
+  scale_fill_manual(values=c("#146660", "#1D244E", "#B3E1E7", "#79FD81","#19B369", "#797979","#000000","#C0C0C0"))
+
+GAbar19+theme_ADC()
+```
+
+
+### 2020
+
+In the first few months of 2020 (January through August), the top three pages in any given month were three of: the blog, a user's data page or profile within the Arctic Data Center, any of the Portals that were set up (with the community able to create their own portals in April 2020), the page to Submit data, and the page with information about training.
+
+```{r category-display-2020, echo=FALSE,results=FALSE,message=FALSE}
+GAbar20 <- ggplot(data=top20_3, aes(fill=Category, x=Date,y=page_sum))+
+  geom_bar(position="dodge",stat="identity")+
+  scale_fill_manual(values=c("#146660", "#1D244E", "#B3E1E7", "#79FD81","#19B369", "#797979","#000000","#C0C0C0"))
+
+GAbar20+theme_ADC()
+```
+
 # Data Collection - Summary
 
 I collected data manually from Google Analytics once a month near the first of each month and added it to the folder Website Metrics. This summary file contains:
 
-* **month**: month of Tweet information
-* **year**: year of Tweet information
-* **date**: formatted the month as the first day of the months o that the date would format nicely for as.Date
+* **month**: month
+* **year**: year
+* **date**: formatted the month as the first day of the months so that the date would format nicely for as.Date
 * **pubs_view**: number of pageviews for the publications page - https://arcticdata.io/publications/
 * **home_view**: number of pageviews for the home page - https://arcticdata.io/
 * **catalog_view**: number of pageviews for the catalog page - https://arcticdata.io/catalog
