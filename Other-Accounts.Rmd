@@ -178,6 +178,11 @@ count_tweetssortedrt <- count_tweets %>%
   group_by(screen_name) %>% 
   slice_max(order_by = normalrt, n = 1)
 
+count_tweetssortedrt1 <- count_tweetssortedrt[1:41,]
+count_tweetssortedrt2 <- count_tweetssortedrt[43:44,]
+
+count_tweetssortedrt<-rbind(count_tweetssortedrt1,count_tweetssortedrt2)
+
 count_tweetssortedfavrt<-data.frame(
   screen_name=count_tweetssortedfav$screen_name,
   fav_hour=count_tweetssortedfav$Hour,
