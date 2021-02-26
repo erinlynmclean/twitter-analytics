@@ -408,17 +408,27 @@ accounts<-c("@PolarImpact","@Polar_Research","@PridePolar","@PopePolar","@IARPCC
 result_list <- lapply(accounts, influentialtwitter, n = 3200)
 result_all <- do.call(bind_rows, result_list)
 
-#orgs that would also be influential but haven't tweeted us lol so leave them out for now "@thecarpentries","@MOSAiCArctic","@ArcticCouncil","@GlacierHub",
+result_all$posdate <- as.POSIXct(result_all$created_at,format="%Y:%m:%d %H:%M:%S")
+result_all$posdate <- with_tz(result_all$posdate, tzone = "America/Los_Angeles")
+result_all$Time <- format(as.POSIXct(result_all$posdate,format="%Y:%m:%d %H:%M:%S"),"%H:%M:%S")
+result_all$Date <- format(as.POSIXct(result_all$posdate,format="%Y:%m:%d %H:%M:%S"),"%Y:%m:%d")
+result_all$Hour<-format(strptime(result_all$Time,"%H:%M:%S"),'%H')
+result_all$MonthYr<-format(strptime(result_all$Date,"%Y:%m:%d"),'%Y:%m')
+result_all$Year<-format(strptime(result_all$Date,"%Y:%m:%d"),'%Y')
+result_all$weekday<-wday(as.Date(result_all$Date,"%Y:%m:%d"), label=TRUE)
+
+#orgs that would also be influential but haven't tweeted us lol so leave them out for now "@thecarpentries","@MOSAiCArctic","@ArcticCouncil","@GlacierHub"
 ```
 
 ```{r other-account-analysis-clean, echo=FALSE,results=FALSE,warning=FALSE, message=FALSE}
 by_account <- result_all %>% 
-  group_by(account)
+  group_by(account,Year) %>% 
+  summarize(n=n())
 
 #Remove retweets=TRUE because the tweet counts twice - ie if NSIDC retweets something we did, that counts as one of our retweets AND that they retweeted us. Only looking at organic mentions or "quote tweets"
-by_account_organic <- by_account[by_account$is_retweet==FALSE, ] 
+#by_account_organic <- by_account[by_account$is_retweet==FALSE, ] 
 
-follower_count <- by_account_organic %>% 
+follower_count <- result_all %>% 
   select(account, followers_count)
 
 follower_count <- follower_count[match(unique(follower_count$account), follower_count$account),]
@@ -429,74 +439,22 @@ follower_count <- follower_count %>%
 
 ### Engagement with the larger Arctic Research / Policy Community 
 
-One way to understand how impactful our Tweets are is by looking at the influential Twitter accounts that are mentioning @ArcticDataCtr (`r twitter_summary_metrics$Number_Followers[1]` followers) in their Tweets. Influential accounts in the Arctic research space that have mentioned our content organically, rather than just retweeting it: ArcticResearch (`r follower_count$followers_count[1]` followers), IARPCCollab (`r follower_count$followers_count[5]` followers), PopePolar (`r follower_count$followers_count[8]` followers), PridePolar (`r follower_count$followers_count[9]` followers), Toolik (`r follower_count$followers_count[11]` followers), and US_APECS (`r follower_count$followers_count[12]` followers).
+One way to understand how impactful our Tweets are is by looking at number of times that influential Twitter accounts that are mentioning @ArcticDataCtr (`r twitter_summary_metrics$Number_Followers[1]` followers) in their Tweets. Influential accounts in the Arctic research space: ArcticResearch (`r follower_count$followers_count[1]` followers), ESA_org (`r follower_count$followers_count[4]` followers), IARC_Alaska (`r follower_count$followers_count[6]` followers), IARPCCollab (`r follower_count$followers_count[7]` followers), NSIDC (`r follower_count$followers_count[11]` followers), Polar_Research (`r follower_count$followers_count[12]` followers), PolarImpact (`r follower_count$followers_count[13]` followers), PopePolar (`r follower_count$followers_count[14]` followers), PridePolar (`r follower_count$followers_count[15]` followers), theAGU (`r follower_count$followers_count[17]` followers), Toolik (`r follower_count$followers_count[18]` followers), UArctic (`r follower_count$followers_count[19]` followers), and US_APECS (`r follower_count$followers_count[20]` followers).
 
-Influential accounts in the data repository or open science space: DataONEorg (`r follower_count$followers_count[2]` followers), EDIgotdata (`r follower_count$followers_count[3]` followers), ESIPfed (`r follower_count$followers_count[4]` followers), NCEAS (`r follower_count$followers_count[6]` followers), NEON_sci (`r follower_count$followers_count[7]` followers), rOpenSci (`r follower_count$followers_count[10]` followers), and USLTER (`r follower_count$followers_count[13]` followers).
+Influential accounts in the data repository or open science space: DataONEorg (`r follower_count$followers_count[2]` followers), EDIgotdata (`r follower_count$followers_count[3]` followers), ESIPfed (`r follower_count$followers_count[5]` followers), MakeDataCount (`r follower_count$followers_count[8]` followers), NCEAS (`r follower_count$followers_count[9]` followers), NEON_sci (`r follower_count$followers_count[10]` followers), rOpenSci (`r follower_count$followers_count[16]` followers), and USLTER (`r follower_count$followers_count[21]` followers).
 
-```{r other-account-analysis-graphs, results=FALSE,echo=FALSE,warning=FALSE, message=FALSE}
-by_account_organic<- by_account_organic %>% summarise(
-  total=n(),
-  favorite_count = mean(favorite_count),
-  retweet_count = mean(retweet_count)
-) %>% 
-arrange(desc(retweet_count))
+```{r other-account-analysis-graph, echo=FALSE,results=FALSE,warning=FALSE, message=FALSE}
+otheraccount<- ggplot(by_account, aes(account, n, fill=Year,label=n)) + 
+       geom_bar(stat="identity")+
+  # if you want the bars next to each other geom_bar(position="dodge",stat="identity")+
+  scale_fill_manual(values=c("#606060","#888888","#B0B0B0","#DCDCDC","#19B369","#B3E1E7"))+
+  geom_text(size = 3, position = position_stack(vjust = 0.5))+
+  ylab("Number of Tweets Mentioning @ArcticDataCtr") + xlab("Account Handle")
 
-#Adding ADC data to table
-by_account_organic
-ADC_tweets_organicmean <- ADC_tweets_organic %>% summarise(
-  favorite_count = mean(favorite_count),
-  retweet_count = mean(retweet_count)
-)
-
-ADCmetrics<-data.frame("@ArcticDataCtr","NA", ADC_tweets_organicmean$favorite_count[1],ADC_tweets_organicmean$retweet_count[1])
-names(ADCmetrics)<-c("account","total","favorite_count","retweet_count")
-
-by_account_organic_ADC<-rbind(by_account_organic,ADCmetrics)
-by_account_organic
-
-by_account_RT<-ggplot(data= by_account_organic, aes(x=account, y=retweet_count)) +
-  geom_col(fill="#B3E1E7")+
-  labs(title='Mean Retweets from Influential Accounts',
-       x="Account Handle",
-       y="Mean Number of Retweets")
-
-by_account_RT<-by_account_RT+theme_ADC()
-
-by_account_organic<- by_account_organic %>% arrange(desc(favorite_count))
-
-by_account_fav<-ggplot(data= by_account_organic, aes(x=account, y=favorite_count)) +
-  geom_col(fill="#79FDB1")+
-  labs(title='Mean Favorites from Influential Accounts',
-       x="Account Handle",
-       y="Mean Number of Favorites")
-
-by_account_fav <-by_account_fav+theme_ADC()
-
-by_account_fav
-
-by_account_ADC_fav<-by_account_organic %>% arrange(desc(favorite_count))
-by_account_ADC_fav
+otheraccount+theme_ADC()
 ```
 
-This graph illustrates that the Arctic Data Center's organic tweets are favorited often when we are mentioned and/or retweeted by some accounts (eg **`r by_account_ADC_fav$account[1]`** with a mean of `r round(by_account_ADC_fav$favorite_count[1],2)` favorites per tweet, **`r by_account_ADC_fav$account[2]`** with a mean of `r round(by_account_ADC_fav$favorite_count[2],2)` favorites per tweet, and **`r by_account_ADC_fav$account[3]`** with a mean of `r round(by_account_ADC_fav$favorite_count[3],2)` favorites per tweet - compared to a mean of `r round(by_account_ADC_fav$favorite_count[4],2)` favorites on the @ArcticDataCtr account). On the flip side, there are some accounts that when we’re mentioned, the tweets get no favorites at all (eg **`r by_account_ADC_fav$account[16]`** with a mean of `r round(by_account_ADC_fav$favorite_count[16],2)` favorites per tweet, **`r by_account_ADC_fav$account[17]`** with a mean of `r round(by_account_ADC_fav$favorite_count[17],2)` favorites per tweet, and **`r by_account_ADC_fav$account[18]`** with a mean of `r round(by_account_ADC_fav$favorite_count[18],2)` favorites per tweet).
-
-```{r other-account-analysis-graphs2, echo=FALSE,results=FALSE,warning=FALSE, message=FALSE}
-
-by_account_RT
-
-by_account_ADC_rt<-by_account_ADC %>% arrange(desc(retweet_count))
-by_account_ADC_rt
-
-twitter_summary_metrics
-
-```
-
-
-Retweeting is a more direct measure of engagement, as this action puts the ArcticDataCtr name out to a wider variety of followers than just the `r twitter_summary_metrics$Number_Followers[1]` followers we have. This graph illustrates that the Arctic Data Center's organic tweets are retweeted often when we are mentioned and/or retweeted by some accounts (eg **`r by_account_ADC_rt$account[1]`** with a mean of `r round(by_account_ADC_rt$retweet_count[1],2)` retweets per tweet, **`r by_account_ADC_rt$account[2]`** with a mean of `r round(by_account_ADC_rt$retweet_count[2],2)` retweets per tweet, and **`r by_account_ADC_rt$account[3]`** with a mean of `r round(by_account_ADC_rt$retweet_count[3],2)` retweets per tweet - compared to a mean of `r round(by_account_ADC_rt$retweet_count[18],2)` retweets on the @ArcticDataCtr account). On the flip side, there are some accounts that when we’re mentioned, the tweets get fewer retweets (eg **`r by_account_ADC_rt$account[15]`** with a mean of `r round(by_account_ADC_rt$retweet_count[15],2)` retweets per tweet, **`r by_account_ADC_rt$account[16]`** with a mean of `r round(by_account_ADC_rt$retweet_count[16],2)` retweets per tweet, and **`r by_account_ADC_rt$account[17]`** with a mean of `r round(by_account_ADC_rt$retweet_count[17],2)` retweets per tweet).
-
-This graph also shows that tweets from the Arctic Data Center's accounts are getting the fewest retweets as compared to these more influential account - that may be a result of their larger reach in sheer number of followers.
-
-These graphs illustrate places where we should increase our reach - focus on generating content for these influential accounts to favorite and retweet.
+This graph illustrate places where we should increase our reach - focus on getting these influential accounts to interact with our content via retweets, replies, and tags within tweets.
 
 ### When is the best day and time to post tweets?
 Obviously we want to make sure we're tweeting at the right times, so that our community will see and interact with those tweets. Only organic tweets are included in this analysis because engagements and impressions are not calculated the same way for retweets or replies.
