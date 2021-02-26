@@ -1,6 +1,6 @@
 ---
 title: "Twitter Analytics - Arctic Data Center"
-date range: "Beginning-October 2020"
+date range: "Beginning-January 2021"
 output: html_document
 ---
 
@@ -58,6 +58,17 @@ twitter_summary_metrics$Date <-as.Date(twitter_summary_metrics$Date)
 ```
 ```{r downloaded-scraped-data, echo=FALSE,results=FALSE,message=FALSE}
 
+#establishing twitter api token
+tw_token <-
+rtweet::create_token(
+  app = "arcticdataerin",
+ consumer_key="ghq0BRPDALCzlJi6XeCfamHoz",
+  consumer_secret="L6iMsi0E8s2HTOAxkIXDDJFsltWP8MHKHTvIQ3ty1lOXZKnYeC",
+  access_token = "1227727460143259648-ZnA0WvysBE2cPnXmZtbBdwn6JYMmwS",
+  access_secret = "Vo6HnIbN4uMDEPLNeBxazx9eInEjXmF7Qwz1NUeVHiiSL",
+  set_renv = TRUE
+)
+
 #Getting the timeline of tweets from rtweet
 ADC_raw <- get_timeline("@ArcticDataCtr", n= 3200)
 ADC_raw$status_id <-as.numeric(ADC_raw$status_id)
@@ -98,8 +109,20 @@ ADC$weekday<-wday(as.Date(ADC$Date,"%Y:%m:%d"), label=TRUE)
 #use if you want to change the date range of this report
 
 #ADC <- ADC[ADC$Date>="2020:03:11", ] 
-ADC <- ADC[ADC$Date<="2020:10:31", ] 
+ADC <- ADC[ADC$Date<="2021:01:31", ] 
 #twitter_summary_metrics <- twitter_summary_metrics[twitter_summary_metrics$Date>="2020-03-01", ] 
+
+monthlytweets <- ADC %>%  
+  group_by(MonthYr) %>%
+  summarize(n = n())
+
+monthlytweetsimp <- ADC %>%  
+  group_by(MonthYr) %>%
+  summarize(impressions_sum = sum(impressions,na.rm=TRUE))
+
+setwd("~/Documents/Twitter Analytics/Raw Data/")
+write.csv(monthlytweetsimp,file='imp_tweet_count.csv')
+write.csv(monthlytweets,file='tweet_count.csv')
 ```
 
 ```{r cleaning-data-organic, echo=FALSE,results=FALSE,message=FALSE,eval=TRUE}
@@ -380,23 +403,34 @@ influentialtwitter <- function(account_name, n){
     }
     return(df_results) #always goes at the end of the function
 }
-accounts<-c("@PolarImpact","@Polar_Research","@PridePolar","@PopePolar","@IARPCCollab","@Toolik" , "@IARC_Alaska","@ArcticResearch","@US_APECS","@DataONEorg", "@EDIgotdata", "@NCEAS", "@USLTER", "@rOpenSci", "@NEON_sci", "@ESA_org", "@ESIPfed")
+accounts<-c("@PolarImpact","@Polar_Research","@PridePolar","@PopePolar","@IARPCCollab","@Toolik" , "@IARC_Alaska","@ArcticResearch","@US_APECS","@DataONEorg", "@EDIgotdata", "@NCEAS", "@USLTER", "@rOpenSci", "@NEON_sci", "@ESA_org", "@ESIPfed","@makedatacount", "@theAGU","@NSIDC","@UArctic")
 
 result_list <- lapply(accounts, influentialtwitter, n = 3200)
 result_all <- do.call(bind_rows, result_list)
 
-#orgs that would be influential but haven't tweeted us lol so leave them out for now "@makedatacount", "@thecarpentries","@theAGU","@NSIDC","@MOSAiCArctic","@UArctic","@ArcticCouncil","@GlacierHub",
+#orgs that would also be influential but haven't tweeted us lol so leave them out for now "@thecarpentries","@MOSAiCArctic","@ArcticCouncil","@GlacierHub",
+```
+
+```{r other-account-analysis-clean, echo=FALSE,warning=FALSE, message=FALSE}
+by_account <- result_all %>% 
+  group_by(account)
+
+follower_count <- by_account %>% 
+  select(account, followers_count)
+
+follower_count <- follower_count[match(unique(follower_count$account), follower_count$account),]
+
+follower_count <- follower_count %>% 
+  arrange(-desc(account))
 ```
 
 ### Engagement with the larger Arctic Research / Policy Community 
 
-One way to understand how impactful our Tweets are is by looking at the influential Twitter accounts that are mentioning @ArcticDataCtr (`r twitter_summary_metrics$Number_Followers[1]` followers) in their Tweets. Influential accounts in the Arctic research space: PolarImpact (`r result_all$followers_count[2]` followers), Polar_Research (`r result_all$followers_count[5]` followers), PridePolar (`r result_all$followers_count[8]` followers), PopePolar (`r result_all$followers_count[9]` followers), IARPCCollab (`r result_all$followers_count[23]` followers), Toolik (`r result_all$followers_count[30]` followers), IARC_Alaska (`r result_all$followers_count[44]` followers), ArcticResearch (`r result_all$followers_count[45]` followers), and US_APECS (`r result_all$followers_count[73]` followers).
+One way to understand how impactful our Tweets are is by looking at the influential Twitter accounts that are mentioning @ArcticDataCtr (`r twitter_summary_metrics$Number_Followers[1]` followers) in their Tweets. Influential accounts in the Arctic research space: ArcticResearch (`r follower_count$followers_count[1]` followers), ESA_org (`r follower_count$followers_count[4]` followers), IARC_Alaska (`r follower_count$followers_count[6]` followers), IARPCCollab (`r follower_count$followers_count[7]` followers), NSIDC (`r follower_count$followers_count[11]` followers), Polar_Research (`r follower_count$followers_count[12]` followers), PolarImpact (`r follower_count$followers_count[13]` followers), PopePolar (`r follower_count$followers_count[14]` followers), PridePolar (`r follower_count$followers_count[15]` followers), theAGU (`r follower_count$followers_count[17]` followers), Toolik (`r follower_count$followers_count[18]` followers), UArctic (`r follower_count$followers_count[19]` followers), and US_APECS (`r follower_count$followers_count[20]` followers).
 
-Influential accounts in the data repository or open science space: DataONEorg (`r result_all$followers_count[80]` followers), EDIgotdata (`r result_all$followers_count[119]` followers), NCEAS (`r result_all$followers_count[195]` followers), USLTER (`r result_all$followers_count[318]` followers), rOpenSci (`r result_all$followers_count[350]` followers), NEON_sci (`r result_all$followers_count[351]` followers), ESA_org (`r result_all$followers_count[359]` followers), and ESIPfed (`r result_all$followers_count[364]` followers).
+Influential accounts in the data repository or open science space: DataONEorg (`r follower_count$followers_count[2]` followers), EDIgotdata (`r follower_count$followers_count[3]` followers), ESIPfed (`r follower_count$followers_count[5]` followers), MakeDataCount (`r follower_count$followers_count[8]` followers), NCEAS (`r follower_count$followers_count[9]` followers), NEON_sci (`r follower_count$followers_count[10]` followers), rOpenSci (`r follower_count$followers_count[16]` followers), and USLTER (`r follower_count$followers_count[21]` followers).
 
-```{r other-account-analysis-graphs, echo=FALSE,results=FALSE,warning=FALSE, message=FALSE}
-by_account <- result_all %>% group_by(account)
-
+```{r other-account-analysis-clean, echo=FALSE,warning=FALSE, message=FALSE}
 by_account<- by_account %>% summarise(
   total=n(),
   favorite_count = mean(favorite_count),
