@@ -411,11 +411,14 @@ result_all <- do.call(bind_rows, result_list)
 #orgs that would also be influential but haven't tweeted us lol so leave them out for now "@thecarpentries","@MOSAiCArctic","@ArcticCouncil","@GlacierHub",
 ```
 
-```{r other-account-analysis-clean, echo=FALSE,warning=FALSE, message=FALSE}
+```{r other-account-analysis-clean, echo=FALSE,results=FALSE,warning=FALSE, message=FALSE}
 by_account <- result_all %>% 
   group_by(account)
 
-follower_count <- by_account %>% 
+#Remove retweets=TRUE because the tweet counts twice - ie if NSIDC retweets something we did, that counts as one of our retweets AND that they retweeted us. Only looking at organic mentions or "quote tweets"
+by_account_organic <- by_account[by_account$is_retweet==FALSE, ] 
+
+follower_count <- by_account_organic %>% 
   select(account, followers_count)
 
 follower_count <- follower_count[match(unique(follower_count$account), follower_count$account),]
@@ -426,12 +429,12 @@ follower_count <- follower_count %>%
 
 ### Engagement with the larger Arctic Research / Policy Community 
 
-One way to understand how impactful our Tweets are is by looking at the influential Twitter accounts that are mentioning @ArcticDataCtr (`r twitter_summary_metrics$Number_Followers[1]` followers) in their Tweets. Influential accounts in the Arctic research space: ArcticResearch (`r follower_count$followers_count[1]` followers), ESA_org (`r follower_count$followers_count[4]` followers), IARC_Alaska (`r follower_count$followers_count[6]` followers), IARPCCollab (`r follower_count$followers_count[7]` followers), NSIDC (`r follower_count$followers_count[11]` followers), Polar_Research (`r follower_count$followers_count[12]` followers), PolarImpact (`r follower_count$followers_count[13]` followers), PopePolar (`r follower_count$followers_count[14]` followers), PridePolar (`r follower_count$followers_count[15]` followers), theAGU (`r follower_count$followers_count[17]` followers), Toolik (`r follower_count$followers_count[18]` followers), UArctic (`r follower_count$followers_count[19]` followers), and US_APECS (`r follower_count$followers_count[20]` followers).
+One way to understand how impactful our Tweets are is by looking at the influential Twitter accounts that are mentioning @ArcticDataCtr (`r twitter_summary_metrics$Number_Followers[1]` followers) in their Tweets. Influential accounts in the Arctic research space that have mentioned our content organically, rather than just retweeting it: ArcticResearch (`r follower_count$followers_count[1]` followers), IARPCCollab (`r follower_count$followers_count[5]` followers), PopePolar (`r follower_count$followers_count[8]` followers), PridePolar (`r follower_count$followers_count[9]` followers), Toolik (`r follower_count$followers_count[11]` followers), and US_APECS (`r follower_count$followers_count[12]` followers).
 
-Influential accounts in the data repository or open science space: DataONEorg (`r follower_count$followers_count[2]` followers), EDIgotdata (`r follower_count$followers_count[3]` followers), ESIPfed (`r follower_count$followers_count[5]` followers), MakeDataCount (`r follower_count$followers_count[8]` followers), NCEAS (`r follower_count$followers_count[9]` followers), NEON_sci (`r follower_count$followers_count[10]` followers), rOpenSci (`r follower_count$followers_count[16]` followers), and USLTER (`r follower_count$followers_count[21]` followers).
+Influential accounts in the data repository or open science space: DataONEorg (`r follower_count$followers_count[2]` followers), EDIgotdata (`r follower_count$followers_count[3]` followers), ESIPfed (`r follower_count$followers_count[4]` followers), NCEAS (`r follower_count$followers_count[6]` followers), NEON_sci (`r follower_count$followers_count[7]` followers), rOpenSci (`r follower_count$followers_count[10]` followers), and USLTER (`r follower_count$followers_count[13]` followers).
 
-```{r other-account-analysis-clean, echo=FALSE,warning=FALSE, message=FALSE}
-by_account<- by_account %>% summarise(
+```{r other-account-analysis-graphs, results=FALSE,echo=FALSE,warning=FALSE, message=FALSE}
+by_account_organic<- by_account_organic %>% summarise(
   total=n(),
   favorite_count = mean(favorite_count),
   retweet_count = mean(retweet_count)
@@ -439,7 +442,7 @@ by_account<- by_account %>% summarise(
 arrange(desc(retweet_count))
 
 #Adding ADC data to table
-by_account
+by_account_organic
 ADC_tweets_organicmean <- ADC_tweets_organic %>% summarise(
   favorite_count = mean(favorite_count),
   retweet_count = mean(retweet_count)
@@ -448,10 +451,10 @@ ADC_tweets_organicmean <- ADC_tweets_organic %>% summarise(
 ADCmetrics<-data.frame("@ArcticDataCtr","NA", ADC_tweets_organicmean$favorite_count[1],ADC_tweets_organicmean$retweet_count[1])
 names(ADCmetrics)<-c("account","total","favorite_count","retweet_count")
 
-by_account_ADC<-rbind(by_account,ADCmetrics)
-by_account_ADC
+by_account_organic_ADC<-rbind(by_account_organic,ADCmetrics)
+by_account_organic
 
-by_account_RT<-ggplot(data= by_account_ADC, aes(x=account, y=retweet_count)) +
+by_account_RT<-ggplot(data= by_account_organic, aes(x=account, y=retweet_count)) +
   geom_col(fill="#B3E1E7")+
   labs(title='Mean Retweets from Influential Accounts',
        x="Account Handle",
@@ -459,9 +462,9 @@ by_account_RT<-ggplot(data= by_account_ADC, aes(x=account, y=retweet_count)) +
 
 by_account_RT<-by_account_RT+theme_ADC()
 
-by_account<- by_account %>% arrange(desc(favorite_count))
+by_account_organic<- by_account_organic %>% arrange(desc(favorite_count))
 
-by_account_fav<-ggplot(data= by_account_ADC, aes(x=account, y=favorite_count)) +
+by_account_fav<-ggplot(data= by_account_organic, aes(x=account, y=favorite_count)) +
   geom_col(fill="#79FDB1")+
   labs(title='Mean Favorites from Influential Accounts',
        x="Account Handle",
@@ -471,7 +474,7 @@ by_account_fav <-by_account_fav+theme_ADC()
 
 by_account_fav
 
-by_account_ADC_fav<-by_account_ADC %>% arrange(desc(favorite_count))
+by_account_ADC_fav<-by_account_organic %>% arrange(desc(favorite_count))
 by_account_ADC_fav
 ```
 
